@@ -30,7 +30,9 @@ export default function AuthPage() {
     return <Navigate to="/onboarding" replace />;
   }
 
-  const fakeEmail = (name: string) => `${name.toLowerCase()}@myoffer.local`;
+  // 将用户名转换为虚拟邮箱格式传给 Supabase Auth
+  // 注意：需要在 Supabase Dashboard → Authentication → Providers → Email 中关闭 "Confirm email" 选项
+  const fakeEmail = (name: string) => `${name.toLowerCase()}@myoffer.app`;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
