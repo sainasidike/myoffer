@@ -179,7 +179,7 @@ function generateEssayResponse(input: string, docType: string): string {
     return `好的，我已根据你的背景信息生成了${docType === "PS" ? "动机信" : docType === "CV" ? "简历" : "推荐信"}初稿 📝\n\n请在右侧编辑器中查看和修改。如果需要调整，请告诉我具体修改方向。`;
   if (input.includes("修改") || input.includes("改"))
     return "好的，我已根据你的反馈更新了文书内容。请查看右侧编辑器中的修改。";
-  return "收到！我会结合你的信息进行优化。你可以尝试说"帮我生成初稿"来开始。";
+  return "收到！我会结合你的信息进行优化。你可以尝试说「帮我生成初稿」来开始。";
 }
 
 function getSampleEssay(docType: string): string {
