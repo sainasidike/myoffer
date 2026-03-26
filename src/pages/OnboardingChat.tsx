@@ -1,9 +1,7 @@
 import { useState, useRef, useEffect } from "react";
-import { Paperclip, Send, Upload, CheckCircle2, Circle } from "lucide-react";
+import { Paperclip, Send, Plus, FileText, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 
 interface ChatMessage {
   id: string;
@@ -11,23 +9,41 @@ interface ChatMessage {
   content: string;
 }
 
-const steps = ["注册", "录入", "选校", "申请"];
 const profileFields = [
-  { key: "school", label: "学校/学历", done: false },
-  { key: "major", label: "专业", done: false },
-  { key: "gpa", label: "GPA", done: false },
-  { key: "lang", label: "语言成绩", done: false },
-  { key: "gre", label: "GRE", done: false },
-  { key: "intern", label: "实习科研", done: false },
-  { key: "country", label: "目标国家", done: false },
+  { key: "school", label: "学校 / 学历", done: true },
+  { key: "major", label: "专业方向", done: true },
+  { key: "gpa", label: "GPA / 均分", done: true },
+  { key: "lang", label: "语言成绩", status: "active" as const },
+  { key: "gre", label: "GRE / GMAT", done: false },
+  { key: "intern", label: "实习 / 科研", done: false },
+  { key: "country", label: "目标国家 / 预算", done: false },
 ];
 
 const initialMessages: ChatMessage[] = [
   {
     id: "1",
     role: "ai",
-    content:
-      "你好！我是MyOffer智能留学助手 🎓\n\n我将帮助你完成留学申请的信息录入。请先告诉我你目前的学校和学历情况吧？比如：\n\n- 就读/毕业院校\n- 学历层次（本科/硕士）\n- 毕业年份",
+    content: "你好！我是你的申请顾问。请问你目前就读于哪所学校？是本科在读还是已毕业呢？",
+  },
+  {
+    id: "2",
+    role: "user",
+    content: "我在北京大学，计算机系本科大四，今年毕业",
+  },
+  {
+    id: "3",
+    role: "ai",
+    content: "明白了！北京大学计算机系，今年毕业。你的 GPA 或者均分大概是多少？如果有成绩单，也可以直接上传给我哦 📄",
+  },
+  {
+    id: "4",
+    role: "user",
+    content: "GPA 3.7/4.0，均分 88 分",
+  },
+  {
+    id: "5",
+    role: "ai",
+    content: "很不错！3.7 的 GPA 竞争力很强。你有语言成绩吗？托福还是雅思？",
   },
 ];
 
@@ -35,13 +51,11 @@ export default function OnboardingChat() {
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [input, setInput] = useState("");
   const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
-  const [fields, setFields] = useState(profileFields);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const completionPct = Math.round(
-    (fields.filter((f) => f.done).length / fields.length) * 100
-  );
+  const doneCount = profileFields.filter((f) => f.done).length;
+  const completionPct = Math.round((doneCount / profileFields.length) * 100);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -57,7 +71,6 @@ export default function OnboardingChat() {
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
 
-    // Simulate AI response
     setTimeout(() => {
       const aiMsg: ChatMessage = {
         id: (Date.now() + 1).toString(),
@@ -65,14 +78,6 @@ export default function OnboardingChat() {
         content: getSimulatedResponse(input),
       };
       setMessages((prev) => [...prev, aiMsg]);
-
-      // Simulate field completion
-      setFields((prev) => {
-        const next = [...prev];
-        const incomplete = next.findIndex((f) => !f.done);
-        if (incomplete >= 0) next[incomplete] = { ...next[incomplete], done: true };
-        return next;
-      });
     }, 800);
   };
 
@@ -82,7 +87,6 @@ export default function OnboardingChat() {
     const names = Array.from(files).map((f) => f.name);
     setUploadedFiles((prev) => [...prev, ...names]);
 
-    // Simulate AI parsing
     setTimeout(() => {
       const aiMsg: ChatMessage = {
         id: Date.now().toString(),
@@ -95,67 +99,68 @@ export default function OnboardingChat() {
 
   return (
     <div className="flex flex-col h-screen">
-      {/* Progress Steps */}
-      <div className="flex items-center justify-center gap-0 px-8 py-4 border-b border-border bg-card">
-        {steps.map((step, i) => (
-          <div key={step} className="flex items-center">
-            <div className="flex items-center gap-2">
-              <div
-                className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium ${
-                  i <= 1
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground"
-                }`}
-              >
-                {i + 1}
-              </div>
-              <span
-                className={`text-sm ${
-                  i <= 1 ? "text-foreground font-medium" : "text-muted-foreground"
-                }`}
-              >
-                {step}
-              </span>
-            </div>
-            {i < steps.length - 1 && (
-              <div
-                className={`w-16 h-0.5 mx-3 ${
-                  i < 1 ? "bg-primary" : "bg-muted"
-                }`}
-              />
-            )}
-          </div>
-        ))}
-      </div>
-
       <div className="flex flex-1 overflow-hidden">
         {/* Chat Area */}
         <div className="flex-1 flex flex-col">
-          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+          {/* Chat Header */}
+          <div className="flex items-center gap-3 px-6 py-4 border-b border-border bg-card">
+            <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
+              <Plus className="w-5 h-5 text-primary-foreground" />
+            </div>
+            <div className="flex-1">
+              <div className="text-sm font-semibold text-foreground">MyOffer AI 顾问</div>
+              <div className="text-xs text-muted-foreground">正在收集你的申请信息</div>
+            </div>
+            <div className="w-2.5 h-2.5 rounded-full bg-success" />
+          </div>
+
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5 bg-background">
             {messages.map((msg) => (
               <div
                 key={msg.id}
-                className={`flex animate-message-in ${
+                className={`flex gap-3 animate-message-in ${
                   msg.role === "user" ? "justify-end" : "justify-start"
                 }`}
               >
+                {msg.role === "ai" && (
+                  <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0 mt-1">
+                    <Plus className="w-4 h-4 text-primary-foreground" />
+                  </div>
+                )}
                 <div
                   className={`max-w-[70%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
                     msg.role === "user"
                       ? "bg-primary text-primary-foreground rounded-br-md"
-                      : "bg-card text-card-foreground border border-border rounded-bl-md"
+                      : "bg-muted text-foreground rounded-bl-md"
                   }`}
                 >
                   {msg.content}
                 </div>
+                {msg.role === "user" && (
+                  <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0 mt-1">
+                    <span className="text-xs font-semibold text-primary">我</span>
+                  </div>
+                )}
               </div>
             ))}
+
+            {/* Inline file upload hint */}
+            <div className="border-2 border-dashed border-primary/30 rounded-xl px-4 py-3 flex items-center gap-2 cursor-pointer hover:border-primary/50 transition-colors"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <FileText className="w-4 h-4 text-primary" />
+              <span className="text-sm text-primary">
+                支持拖入 PDF、图片、Word 文档，AI 自动解析
+              </span>
+            </div>
+
             <div ref={chatEndRef} />
           </div>
 
           {/* Input Bar */}
           <div className="px-6 py-4 border-t border-border bg-card">
-            <div className="flex items-center gap-2 max-w-3xl mx-auto">
+            <div className="flex items-center gap-2 max-w-4xl mx-auto">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -176,7 +181,7 @@ export default function OnboardingChat() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-                placeholder="输入你的信息..."
+                placeholder="输入回复，或上传文件..."
                 className="flex-1"
               />
               <Button
@@ -184,72 +189,69 @@ export default function OnboardingChat() {
                 onClick={sendMessage}
                 disabled={!input.trim()}
               >
-                <Send className="w-4 h-4" />
+                <ArrowRight className="w-4 h-4" />
               </Button>
             </div>
           </div>
         </div>
 
         {/* Right Panel */}
-        <div className="w-[260px] border-l border-border bg-card p-4 space-y-4 overflow-y-auto hidden lg:block">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">档案完整度</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">完成进度</span>
-                <span className="font-semibold text-primary">{completionPct}%</span>
-              </div>
-              <Progress value={completionPct} className="h-2" />
-              <div className="space-y-2 mt-3">
-                {fields.map((f) => (
-                  <div key={f.key} className="flex items-center gap-2 text-sm">
-                    {f.done ? (
-                      <CheckCircle2 className="w-4 h-4 text-success" />
-                    ) : (
-                      <Circle className="w-4 h-4 text-muted-foreground" />
-                    )}
-                    <span className={f.done ? "text-foreground" : "text-muted-foreground"}>
-                      {f.label}
-                    </span>
+        <div className="w-[280px] border-l border-border bg-card p-5 space-y-5 overflow-y-auto hidden lg:block">
+          {/* Profile completeness */}
+          <div className="rounded-xl border border-border bg-card p-4 space-y-4">
+            <div className="text-sm font-semibold text-foreground">档案完整度</div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">已收集信息</span>
+              <span className="text-lg font-bold text-primary">{completionPct}%</span>
+            </div>
+            <div className="w-full h-2 rounded-full bg-muted overflow-hidden">
+              <div
+                className="h-full rounded-full bg-primary transition-all duration-500"
+                style={{ width: `${completionPct}%` }}
+              />
+            </div>
+            <div className="space-y-2.5 pt-1">
+              {profileFields.map((f) => (
+                <div key={f.key} className="flex items-center gap-2.5 text-sm">
+                  <div
+                    className={`w-2.5 h-2.5 rounded-full ${
+                      f.done
+                        ? "bg-success"
+                        : f.status === "active"
+                        ? "bg-warning"
+                        : "bg-muted-foreground/30"
+                    }`}
+                  />
+                  <span className={f.done ? "text-foreground" : "text-muted-foreground"}>
+                    {f.label}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Uploaded materials */}
+          <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+            <div className="text-sm font-semibold text-foreground">上传的材料</div>
+            {uploadedFiles.length > 0 ? (
+              <div className="space-y-2">
+                {uploadedFiles.map((name, i) => (
+                  <div
+                    key={i}
+                    className="text-xs text-foreground bg-muted rounded-lg px-3 py-2 truncate"
+                  >
+                    📎 {name}
                   </div>
                 ))}
               </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">上传材料</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div
-                className="border-2 border-dashed border-border rounded-lg p-4 text-center cursor-pointer hover:border-primary/50 transition-colors"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <Upload className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
-                <p className="text-xs text-muted-foreground">
-                  拖放文件或点击上传
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  支持 PDF / Word / 图片
-                </p>
+            ) : (
+              <div className="border border-dashed border-border rounded-lg p-6 text-center">
+                <FileText className="w-8 h-8 mx-auto text-muted-foreground/50 mb-2" />
+                <p className="text-xs text-muted-foreground">暂无上传文件</p>
+                <p className="text-xs text-muted-foreground mt-1">点击对话框附件按钮上传</p>
               </div>
-              {uploadedFiles.length > 0 && (
-                <div className="mt-3 space-y-1">
-                  {uploadedFiles.map((name, i) => (
-                    <div
-                      key={i}
-                      className="text-xs text-foreground bg-muted rounded px-2 py-1 truncate"
-                    >
-                      📎 {name}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+            )}
+          </div>
         </div>
       </div>
     </div>

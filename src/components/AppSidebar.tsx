@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 
 const navItems = [
-  { title: "信息录入", path: "/onboarding", icon: ClipboardList },
+  { title: "AI助手", path: "/onboarding", icon: ClipboardList },
   { title: "AI选校", path: "/schools", icon: GraduationCap },
   { title: "申请管家", path: "/applications", icon: Briefcase },
   { title: "文书创作", path: "/essays", icon: PenTool },
