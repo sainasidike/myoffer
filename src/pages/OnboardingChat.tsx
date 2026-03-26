@@ -1,34 +1,21 @@
 import { useState, useRef, useEffect } from "react";
-import { Paperclip, Send, Plus, FileText, ArrowRight } from "lucide-react";
+import { Paperclip, Plus, FileText, ArrowRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-
-interface ChatMessage {
-  id: string;
-  role: "ai" | "user";
-  content: string;
-}
+import { useGeminiChat } from "@/hooks/useGeminiChat";
 
 const profileFields = [
-  { key: "school", label: "学校 / 学历", done: true },
-  { key: "major", label: "专业方向", done: true },
-  { key: "gpa", label: "GPA / 均分", done: true },
-  { key: "lang", label: "语言成绩", status: "active" as const },
+  { key: "school", label: "学校 / 学历", done: false },
+  { key: "major", label: "专业方向", done: false },
+  { key: "gpa", label: "GPA / 均分", done: false },
+  { key: "lang", label: "语言成绩", done: false },
   { key: "gre", label: "GRE / GMAT", done: false },
   { key: "intern", label: "实习 / 科研", done: false },
   { key: "country", label: "目标国家 / 预算", done: false },
 ];
 
-const initialMessages: ChatMessage[] = [
-  {
-    id: "1",
-    role: "ai",
-    content: "你好！我是你的留学申请顾问，很高兴认识你。请问你目前就读于哪所学校？是本科在读还是已经毕业了？",
-  },
-];
-
 export default function OnboardingChat() {
-  const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
+  const { messages, isLoading, sendMessage: sendToGemini } = useGeminiChat();
   const [input, setInput] = useState("");
   const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
   const chatEndRef = useRef<HTMLDivElement>(null);
