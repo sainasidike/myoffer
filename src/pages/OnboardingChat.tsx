@@ -201,15 +201,3 @@ export default function OnboardingChat() {
       </div>
     </div>
   );
-}
-
-function getSimulatedResponse(input: string): string {
-  const lower = input.toLowerCase();
-  if (lower.includes("gpa") || lower.includes("绩点"))
-    return "好的，已记录你的GPA信息 ✅\n\n接下来请告诉我你的语言成绩情况？比如雅思/托福分数？";
-  if (lower.includes("雅思") || lower.includes("托福") || lower.includes("ielts"))
-    return "语言成绩已记录 ✅\n\n请问你有GRE/GMAT成绩吗？如果没有可以直接说「没有」。";
-  if (lower.includes("实习") || lower.includes("科研"))
-    return "实习/科研经历已记录 ✅\n\n最后，请告诉我你的目标留学国家和预算范围？";
-  return "好的，信息已记录 ✅\n\n请继续补充其他信息，或上传相关材料文件，我会自动解析。";
-}
