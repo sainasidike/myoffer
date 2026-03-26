@@ -5,24 +5,23 @@ import { Input } from "@/components/ui/input";
 import { useGeminiChat } from "@/hooks/useGeminiChat";
 
 const profileFields = [
-  { key: "school", label: "学校 / 学历", done: false },
-  { key: "major", label: "专业方向", done: false },
-  { key: "gpa", label: "GPA / 均分", done: false },
-  { key: "lang", label: "语言成绩", done: false },
-  { key: "gre", label: "GRE / GMAT", done: false },
-  { key: "intern", label: "实习 / 科研", done: false },
-  { key: "country", label: "目标国家 / 预算", done: false },
+  { key: "school", label: "学校 / 学历" },
+  { key: "major", label: "专业方向" },
+  { key: "gpa", label: "GPA / 均分" },
+  { key: "lang", label: "语言成绩" },
+  { key: "gre", label: "GRE / GMAT" },
+  { key: "intern", label: "实习 / 科研" },
+  { key: "country", label: "目标国家 / 预算" },
 ];
 
 export default function OnboardingChat() {
-  const { messages, isLoading, sendMessage: sendToGemini } = useGeminiChat();
+  const { messages, isLoading, sendMessage } = useGeminiChat();
   const [input, setInput] = useState("");
   const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const doneCount = profileFields.filter((f) => f.done).length;
-  const completionPct = Math.round((doneCount / profileFields.length) * 100);
+  const completionPct = 0;
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -32,7 +31,7 @@ export default function OnboardingChat() {
     if (!input.trim() || isLoading) return;
     const text = input;
     setInput("");
-    sendToGemini(text);
+    sendMessage(text);
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -40,7 +39,7 @@ export default function OnboardingChat() {
     if (!files) return;
     const names = Array.from(files).map((f) => f.name);
     setUploadedFiles((prev) => [...prev, ...names]);
-    sendToGemini(`我上传了以下文件：${names.join(", ")}，请帮我解析其中的信息。`);
+    sendMessage(`我上传了以下文件：${names.join(", ")}，请帮我解析其中的信息。`);
   };
 
   return (
@@ -91,8 +90,20 @@ export default function OnboardingChat() {
               </div>
             ))}
 
+            {isLoading && messages[messages.length - 1]?.role === "user" && (
+              <div className="flex gap-3 justify-start">
+                <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0 mt-1">
+                  <Plus className="w-4 h-4 text-primary-foreground" />
+                </div>
+                <div className="bg-muted rounded-2xl rounded-bl-md px-4 py-3">
+                  <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                </div>
+              </div>
+            )}
+
             {/* Inline file upload hint */}
-            <div className="border-2 border-dashed border-primary/30 rounded-xl px-4 py-3 flex items-center gap-2 cursor-pointer hover:border-primary/50 transition-colors"
+            <div
+              className="border-2 border-dashed border-primary/30 rounded-xl px-4 py-3 flex items-center gap-2 cursor-pointer hover:border-primary/50 transition-colors"
               onClick={() => fileInputRef.current?.click()}
             >
               <FileText className="w-4 h-4 text-primary" />
@@ -136,7 +147,11 @@ export default function OnboardingChat() {
                 onClick={handleSend}
                 disabled={!input.trim() || isLoading}
               >
-                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
+                {isLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <ArrowRight className="w-4 h-4" />
+                )}
               </Button>
             </div>
           </div>
@@ -160,16 +175,8 @@ export default function OnboardingChat() {
             <div className="space-y-2.5 pt-1">
               {profileFields.map((f) => (
                 <div key={f.key} className="flex items-center gap-2.5 text-sm">
-                  <div
-                    className={`w-2.5 h-2.5 rounded-full ${
-                      f.done
-                        ? "bg-success"
-                        : "bg-muted-foreground/30"
-                    }`}
-                  />
-                  <span className={f.done ? "text-foreground" : "text-muted-foreground"}>
-                    {f.label}
-                  </span>
+                  <div className="w-2.5 h-2.5 rounded-full bg-muted-foreground/30" />
+                  <span className="text-muted-foreground">{f.label}</span>
                 </div>
               ))}
             </div>
@@ -199,6 +206,6 @@ export default function OnboardingChat() {
           </div>
         </div>
       </div>
+    </div>
   );
 }
-
