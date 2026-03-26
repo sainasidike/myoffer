@@ -1,5 +1,4 @@
-import { useState, useRef, useCallback } from "react";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { useState, useCallback, useRef } from "react";
 
 export interface ChatMessage {
   id: string;
@@ -7,55 +6,25 @@ export interface ChatMessage {
   content: string;
 }
 
-const SYSTEM_PROMPT = `你是MyOffer平台的专业留学申请顾问，正在帮助中国学生整理留学申请所需信息。
+const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/onboarding-chat`;
 
-你的工作方式：
-- 每次只提问1个问题，等用户回答后再继续
-- 已经知道的信息不重复询问
-- 语气亲切自然，像朋友一样交流，适当使用emoji
-- 用户上传文件时，根据信息更新已知内容并继续追问缺失内容
-- 当用户想跳过某个问题时，礼貌接受并继续下一个
-- 收集完足够信息后，主动提出生成档案摘要
-- 始终用中文回复
-
-需要收集的信息字段（按优先级顺序追问）：
-1. 学术背景：当前学历、目标学历、就读学校、专业方向、是否有意向跨专业申请、GPA/均分
-2. 标准化成绩：语言成绩类型（托福/雅思）及分数、GRE/GMAT分数
-3. 软实力经历：实习经历、科研经历（含论文发表）、竞赛获奖、创业经历、志愿服务、海外经历、其他课外经历
-4. 申请偏好：目标国家/地区、留学预算、申请学年、奖学金要求、目标院校排名要求、特殊需求`;
-
-const INITIAL_MESSAGE: ChatMessage = {
-  id: "1",
-  role: "ai",
-  content: "你好！我是你的留学申请顾问，很高兴认识你。请问你目前就读于哪所学校？是本科在读还是已经毕业了？",
-};
+const INITIAL_MESSAGES: ChatMessage[] = [
+  {
+    id: "1",
+    role: "ai",
+    content: "你好！我是你的留学申请顾问，很高兴认识你 😊 我会一步步帮你整理申请材料。先从基本情况开始——请问你想申请本科、硕士还是博士项目呢？",
+  },
+  {
+    id: "2",
+    role: "ai",
+    content: "在开始之前，你也可以先把手头的材料上传给我——比如成绩单、简历、获奖证书或其他任何文件，我来帮你自动识别信息 📎",
+  },
+];
 
 export function useGeminiChat() {
-  const [messages, setMessages] = useState<ChatMessage[]>([INITIAL_MESSAGE]);
+  const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
   const [isLoading, setIsLoading] = useState(false);
-  const chatRef = useRef<any>(null);
-
-  const getChat = useCallback(() => {
-    if (chatRef.current) return chatRef.current;
-
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    if (!apiKey) {
-      console.error("VITE_GEMINI_API_KEY is not set");
-      return null;
-    }
-
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
-
-    chatRef.current = model.startChat({
-      history: [
-        { role: "user", parts: [{ text: SYSTEM_PROMPT }] },
-        { role: "model", parts: [{ text: INITIAL_MESSAGE.content }] },
-      ],
-    });
-
-    return chatRef.current;
-  }, []);
+  const profileDataRef = useRef<Record<string, string>>({});
 
   const sendMessage = useCallback(async (text: string) => {
     if (!text.trim() || isLoading) return;
@@ -69,32 +38,104 @@ export function useGeminiChat() {
     setIsLoading(true);
 
     try {
-      const chat = getChat();
-      if (!chat) {
-        setMessages((prev) => [
-          ...prev,
-          { id: (Date.now() + 1).toString(), role: "ai", content: "API Key 未配置，请设置 VITE_GEMINI_API_KEY 环境变量。" },
-        ]);
-        setIsLoading(false);
-        return;
+      // Build message history for the API (convert ai->assistant)
+      const apiMessages = [...messages, userMsg]
+        .filter((m) => m.id !== "1" && m.id !== "2") // skip initial static messages
+        .map((m) => ({
+          role: m.role === "ai" ? "assistant" : "user",
+          content: m.content,
+        }));
+
+      // If this is the first user message, include initial context
+      if (apiMessages.filter((m) => m.role === "user").length === 1) {
+        apiMessages.unshift(
+          { role: "assistant", content: INITIAL_MESSAGES[0].content },
+          { role: "assistant", content: INITIAL_MESSAGES[1].content }
+        );
       }
 
-      const result = await chat.sendMessageStream(text);
+      const resp = await fetch(CHAT_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({
+          messages: apiMessages,
+          profileData: profileDataRef.current,
+        }),
+      });
 
+      if (!resp.ok || !resp.body) {
+        const errorData = await resp.json().catch(() => ({ error: "AI 服务暂时不可用" }));
+        throw new Error(errorData.error || `HTTP ${resp.status}`);
+      }
+
+      // Stream SSE response
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let textBuffer = "";
+      let fullText = "";
       const aiMsgId = (Date.now() + 1).toString();
+
       setMessages((prev) => [...prev, { id: aiMsgId, role: "ai", content: "" }]);
 
-      let fullText = "";
-      for await (const chunk of result.stream) {
-        const chunkText = chunk.text();
-        fullText += chunkText;
-        const captured = fullText;
+      let streamDone = false;
+      while (!streamDone) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        textBuffer += decoder.decode(value, { stream: true });
+
+        let newlineIndex: number;
+        while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
+          let line = textBuffer.slice(0, newlineIndex);
+          textBuffer = textBuffer.slice(newlineIndex + 1);
+
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (line.startsWith(":") || line.trim() === "") continue;
+          if (!line.startsWith("data: ")) continue;
+
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === "[DONE]") {
+            streamDone = true;
+            break;
+          }
+
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+            if (content) {
+              fullText += content;
+              const captured = fullText;
+              setMessages((prev) =>
+                prev.map((m) => (m.id === aiMsgId ? { ...m, content: captured } : m))
+              );
+            }
+          } catch {
+            textBuffer = line + "\n" + textBuffer;
+            break;
+          }
+        }
+      }
+
+      // Extract profile updates from the response
+      const profileMatch = fullText.match(/<<<PROFILE_UPDATE:(.*?)>>>/g);
+      if (profileMatch) {
+        for (const match of profileMatch) {
+          try {
+            const json = match.replace("<<<PROFILE_UPDATE:", "").replace(">>>", "");
+            const data = JSON.parse(json);
+            profileDataRef.current = { ...profileDataRef.current, ...data };
+          } catch { /* ignore parse errors */ }
+        }
+        // Remove profile update markers from displayed text
+        const cleanText = fullText.replace(/<<<PROFILE_UPDATE:.*?>>>/g, "").trim();
         setMessages((prev) =>
-          prev.map((m) => (m.id === aiMsgId ? { ...m, content: captured } : m))
+          prev.map((m) => (m.id === aiMsgId ? { ...m, content: cleanText } : m))
         );
       }
     } catch (err: any) {
-      console.error("Gemini error:", err);
+      console.error("Chat error:", err);
       setMessages((prev) => [
         ...prev,
         {
@@ -106,7 +147,7 @@ export function useGeminiChat() {
     } finally {
       setIsLoading(false);
     }
-  }, [isLoading, getChat]);
+  }, [isLoading, messages]);
 
-  return { messages, isLoading, sendMessage };
+  return { messages, isLoading, sendMessage, profileData: profileDataRef.current };
 }
