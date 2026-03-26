@@ -14,13 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          created_at: string
+          id: string
+          user_display_id: string
+          username: string
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          user_display_id: string
+          username: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          user_display_id?: string
+          username?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      generate_user_display_id: { Args: never; Returns: string }
     }
     Enums: {
       [_ in never]: never
