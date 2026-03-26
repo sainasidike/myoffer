@@ -199,6 +199,6 @@ export default function OnboardingChat() {
           </div>
         </div>
       </div>
-    </div>
+  );
 }
 
