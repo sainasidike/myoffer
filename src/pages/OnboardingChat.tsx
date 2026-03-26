@@ -28,24 +28,11 @@ export default function OnboardingChat() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const sendMessage = () => {
-    if (!input.trim()) return;
-    const userMsg: ChatMessage = {
-      id: Date.now().toString(),
-      role: "user",
-      content: input,
-    };
-    setMessages((prev) => [...prev, userMsg]);
+  const handleSend = () => {
+    if (!input.trim() || isLoading) return;
+    const text = input;
     setInput("");
-
-    setTimeout(() => {
-      const aiMsg: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        role: "ai",
-        content: getSimulatedResponse(input),
-      };
-      setMessages((prev) => [...prev, aiMsg]);
-    }, 800);
+    sendToGemini(text);
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -53,15 +40,7 @@ export default function OnboardingChat() {
     if (!files) return;
     const names = Array.from(files).map((f) => f.name);
     setUploadedFiles((prev) => [...prev, ...names]);
-
-    setTimeout(() => {
-      const aiMsg: ChatMessage = {
-        id: Date.now().toString(),
-        role: "ai",
-        content: `📄 已收到文件：${names.join(", ")}\n\n正在解析文件内容...我已从文件中提取到了一些信息，请确认是否正确。`,
-      };
-      setMessages((prev) => [...prev, aiMsg]);
-    }, 1000);
+    sendToGemini(`我上传了以下文件：${names.join(", ")}，请帮我解析其中的信息。`);
   };
 
   return (
