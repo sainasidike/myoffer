@@ -5,13 +5,32 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { Navigate } from "react-router-dom";
 
 export default function AuthPage() {
+  const { session, loading: authLoading } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
+
+  if (session) {
+    return <Navigate to="/onboarding" replace />;
+  }
+
+  const fakeEmail = (name: string) => `${name.toLowerCase()}@myoffer.local`;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,18 +38,56 @@ export default function AuthPage() {
       toast.error("请填写用户名和密码");
       return;
     }
+
+    if (!isLogin) {
+      if (password !== confirmPassword) {
+        toast.error("两次输入的密码不一致");
+        return;
+      }
+      if (password.length < 6) {
+        toast.error("密码长度至少6位");
+        return;
+      }
+    }
+
     setLoading(true);
 
-    // Simulate auth
-    setTimeout(() => {
-      setLoading(false);
+    try {
       if (isLogin) {
+        const { error } = await supabase.auth.signInWithPassword({
+          email: fakeEmail(username),
+          password,
+        });
+        if (error) {
+          toast.error("用户名或密码错误");
+          return;
+        }
         toast.success("登录成功！");
+        navigate("/onboarding");
       } else {
+        const { error } = await supabase.auth.signUp({
+          email: fakeEmail(username),
+          password,
+          options: {
+            data: { username },
+          },
+        });
+        if (error) {
+          if (error.message.includes("already registered")) {
+            toast.error("该用户名已被注册");
+          } else {
+            toast.error(error.message);
+          }
+          return;
+        }
         toast.success("注册成功！");
+        navigate("/onboarding");
       }
-      navigate("/onboarding");
-    }, 800);
+    } catch {
+      toast.error("操作失败，请重试");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -68,9 +125,21 @@ export default function AuthPage() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="请输入密码"
+                  placeholder="请输入密码（至少6位）"
                 />
               </div>
+              {!isLogin && (
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">确认密码</Label>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="请再次输入密码"
+                  />
+                </div>
+              )}
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? "处理中..." : isLogin ? "登录" : "注册"}
               </Button>
@@ -79,7 +148,10 @@ export default function AuthPage() {
               <button
                 type="button"
                 className="text-sm text-primary hover:underline"
-                onClick={() => setIsLogin(!isLogin)}
+                onClick={() => {
+                  setIsLogin(!isLogin);
+                  setConfirmPassword("");
+                }}
               >
                 {isLogin ? "没有账号？立即注册" : "已有账号？立即登录"}
               </button>

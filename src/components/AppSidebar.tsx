@@ -6,7 +6,9 @@ import {
   PenTool,
   Settings,
   User,
+  LogOut,
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const navItems = [
   { title: "AI助手", path: "/onboarding", icon: ClipboardList },
@@ -18,6 +20,7 @@ const navItems = [
 
 export function AppSidebar() {
   const location = useLocation();
+  const { profile, signOut } = useAuth();
 
   return (
     <aside className="flex flex-col w-60 min-h-screen bg-sidebar shrink-0">
@@ -62,14 +65,21 @@ export function AppSidebar() {
           <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/20 text-primary">
             <User className="w-4 h-4" />
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <div className="text-sidebar-accent-foreground text-sm font-medium truncate">
-              访客用户
+              {profile?.username ?? "加载中..."}
             </div>
             <div className="text-sidebar-foreground text-xs truncate">
-              ID: GUEST
+              {profile?.user_display_id ?? ""}
             </div>
           </div>
+          <button
+            onClick={signOut}
+            className="text-sidebar-foreground hover:text-destructive transition-colors"
+            title="退出登录"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
       </div>
     </aside>
