@@ -126,16 +126,17 @@ export default function OnboardingChat() {
               <Input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+                onKeyDown={(e) => e.key === "Enter" && handleSend()}
                 placeholder="输入回复，或上传文件..."
                 className="flex-1"
+                disabled={isLoading}
               />
               <Button
                 size="icon"
-                onClick={sendMessage}
-                disabled={!input.trim()}
+                onClick={handleSend}
+                disabled={!input.trim() || isLoading}
               >
-                <ArrowRight className="w-4 h-4" />
+                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
               </Button>
             </div>
           </div>
