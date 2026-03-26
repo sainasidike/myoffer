@@ -164,8 +164,6 @@ export default function OnboardingChat() {
                     className={`w-2.5 h-2.5 rounded-full ${
                       f.done
                         ? "bg-success"
-                        : f.status === "active"
-                        ? "bg-warning"
                         : "bg-muted-foreground/30"
                     }`}
                   />
