@@ -3,7 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 serve(async (req) => {
@@ -12,9 +12,8 @@ serve(async (req) => {
 
   try {
     const { messages, profileData } = await req.json();
-    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-    console.log("GEMINI_API_KEY exists:", !!GEMINI_API_KEY, "length:", GEMINI_API_KEY?.length);
-    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured");
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     const filledFields = Object.entries(profileData || {})
       .filter(([_, v]) => v)
@@ -49,39 +48,30 @@ ${filledFields || "（暂无）"}
 - 用户看不到<<<PROFILE_UPDATE>>>标记，它会被前端自动隐藏
 - 当用户上传文件时，尽可能从文件描述中提取信息并用同样格式标注`;
 
-    // Build Gemini API request body
-    const geminiContents = [];
+    // Build OpenAI-compatible messages
+    const apiMessages = [
+      { role: "system", content: systemPrompt },
+      ...messages,
+    ];
 
-    // Add conversation history
-    for (const msg of messages) {
-      geminiContents.push({
-        role: msg.role === "assistant" ? "model" : "user",
-        parts: [{ text: msg.content }],
-      });
-    }
-
-    const geminiBody = {
-      system_instruction: {
-        parts: [{ text: systemPrompt }],
-      },
-      contents: geminiContents,
-      generationConfig: {
-        temperature: 0.8,
-        maxOutputTokens: 2048,
-      },
-    };
-
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-latest:streamGenerateContent?alt=sse&key=${GEMINI_API_KEY}`;
-
-    const response = await fetch(geminiUrl, {
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(geminiBody),
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: apiMessages,
+        stream: true,
+        temperature: 0.8,
+        max_tokens: 2048,
+      }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("Gemini API error:", response.status, errorText);
+      console.error("AI Gateway error:", response.status, errorText);
 
       if (response.status === 429) {
         return new Response(
@@ -89,62 +79,21 @@ ${filledFields || "（暂无）"}
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+      if (response.status === 402) {
+        return new Response(
+          JSON.stringify({ error: "AI 额度已用尽，请充值后再试" }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
 
       return new Response(
-        JSON.stringify({ error: `AI 服务暂时不可用 (Gemini ${response.status}: ${errorText.slice(0, 200)})` }),
+        JSON.stringify({ error: "AI 服务暂时不可用" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Transform Gemini SSE stream to OpenAI-compatible SSE stream
-    const { readable, writable } = new TransformStream();
-    const writer = writable.getWriter();
-    const encoder = new TextEncoder();
-
-    (async () => {
-      try {
-        const reader = response.body!.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-
-          let newlineIndex: number;
-          while ((newlineIndex = buffer.indexOf("\n")) !== -1) {
-            const line = buffer.slice(0, newlineIndex).trim();
-            buffer = buffer.slice(newlineIndex + 1);
-
-            if (!line.startsWith("data: ")) continue;
-            const jsonStr = line.slice(6);
-
-            try {
-              const parsed = JSON.parse(jsonStr);
-              const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
-              if (text) {
-                // Convert to OpenAI-compatible SSE format
-                const chunk = {
-                  choices: [{ delta: { content: text } }],
-                };
-                await writer.write(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
-              }
-            } catch {
-              // skip unparseable lines
-            }
-          }
-        }
-
-        await writer.write(encoder.encode("data: [DONE]\n\n"));
-      } catch (e) {
-        console.error("Stream error:", e);
-      } finally {
-        await writer.close();
-      }
-    })();
-
-    return new Response(readable, {
+    // Stream the response directly — it's already in OpenAI SSE format
+    return new Response(response.body, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
   } catch (e) {
