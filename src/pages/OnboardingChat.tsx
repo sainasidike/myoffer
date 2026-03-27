@@ -18,13 +18,14 @@ const profileFields = [
 ];
 
 export default function OnboardingChat() {
-  const { messages, isLoading, sendMessage } = useGeminiChat();
+  const { messages, isLoading, sendMessage, profileData } = useGeminiChat();
   const [input, setInput] = useState("");
   const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const completionPct = 0;
+  const filledCount = profileFields.filter((f) => profileData[f.key]).length;
+  const completionPct = Math.round((filledCount / profileFields.length) * 100);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
