@@ -131,11 +131,15 @@ export function useGeminiChat() {
   }, [syncProfileToDb]);
 
   const callAI = useCallback(async (apiMessages: Array<{ role: string; content: string }>) => {
+    const token = await getAccessToken();
+    if (!token) throw new Error("请先登录");
+
     const resp = await fetch(CHAT_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${CLOUD_ANON_KEY}`,
+        Authorization: `Bearer ${token}`,
+        apikey: CLOUD_ANON_KEY,
       },
       body: JSON.stringify({
         messages: apiMessages,
