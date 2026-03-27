@@ -40,10 +40,12 @@ export default function OnboardingChat() {
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (!files) return;
-    const names = Array.from(files).map((f) => f.name);
+    if (!files || files.length === 0) return;
+    const fileArray = Array.from(files);
+    const names = fileArray.map((f) => f.name);
     setUploadedFiles((prev) => [...prev, ...names]);
-    sendMessage(`我上传了以下文件：${names.join(", ")}，请帮我解析其中的信息。`);
+    sendFiles(fileArray);
+    e.target.value = "";
   };
 
   return (
