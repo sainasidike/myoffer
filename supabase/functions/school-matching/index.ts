@@ -262,8 +262,8 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured");
+    const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
+    if (!GROQ_API_KEY) throw new Error("GROQ_API_KEY is not configured");
 
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -400,36 +400,34 @@ ${profileSummary}
 只返回JSON数组，不要其他文字。`;
 
       const aiResp = await fetch(
-        `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+        "https://api.groq.com/openai/v1/chat/completions",
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${GROQ_API_KEY}`,
+          },
           body: JSON.stringify({
-            contents: [
+            model: "llama-3.3-70b-versatile",
+            messages: [
               {
-                role: "user",
-                parts: [{ text: "你是留学数据专家，只返回准确的JSON数据，不添加任何额外文字或markdown标记。" }]
-              },
-              {
-                role: "model",
-                parts: [{ text: "明白了，我只会返回JSON数据。" }]
+                role: "system",
+                content: "你是留学数据专家，只返回准确的JSON数据，不添加任何额外文字或markdown标记。"
               },
               {
                 role: "user",
-                parts: [{ text: aiPrompt }]
+                content: aiPrompt
               }
             ],
-            generationConfig: {
-              temperature: 0.3,
-              maxOutputTokens: 8192,
-            },
+            temperature: 0.3,
+            max_tokens: 8192,
           }),
         }
       );
 
       if (aiResp.ok) {
         const aiData = await aiResp.json();
-        let content = aiData.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        let content = aiData.choices?.[0]?.message?.content || "";
 
         content = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
 

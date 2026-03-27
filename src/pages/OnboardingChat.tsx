@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Paperclip, FileText, ArrowRight, Loader as Loader2, Cpu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useGeminiChat } from "@/hooks/useGeminiChat";
+import { useGroqChat } from "@/hooks/useGroqChat";
 import { StepIndicator } from "@/components/onboarding/StepIndicator";
 
 const profileFields = [
@@ -19,7 +19,7 @@ const profileFields = [
 ];
 
 export default function OnboardingChat() {
-  const { messages, isLoading, sendMessage, sendFiles, profileData, profileVersion } = useGeminiChat();
+  const { messages, isLoading, sendMessage, sendFiles, profileData, profileVersion } = useGroqChat();
   const [input, setInput] = useState("");
   const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
