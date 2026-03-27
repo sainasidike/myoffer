@@ -10,6 +10,10 @@ export interface ChatMessage {
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/onboarding-chat`;
 const PARSE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parse-document`;
 
+// Use Lovable Cloud URL for direct DB operations (profile sync)
+const CLOUD_REST_URL = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1`;
+const CLOUD_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
 const FIELD_TO_COLUMN: Record<string, string> = {
   targetDegree: "target_degree",
   currentEducation: "current_education",
@@ -51,6 +55,25 @@ const UPLOAD_HINT_MESSAGE: ChatMessage = {
 
 type ChatState = "ask_stage" | "free_chat";
 
+/** Get a valid access token — tries the Supabase client session first */
+async function getAccessToken(): Promise<string | null> {
+  try {
+    const { data } = await supabase.auth.getSession();
+    return data?.session?.access_token ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function getUserId(): Promise<string | null> {
+  try {
+    const { data } = await supabase.auth.getSession();
+    return data?.session?.user?.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export function useGeminiChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([WELCOME_MESSAGE]);
   const [isLoading, setIsLoading] = useState(false);
@@ -58,11 +81,12 @@ export function useGeminiChat() {
   const profileDataRef = useRef<Record<string, string>>({});
   const [profileVersion, setProfileVersion] = useState(0);
 
+  /** Sync profile data to Lovable Cloud DB via REST API directly */
   const syncProfileToDb = useCallback(async (data: Record<string, string>) => {
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const userId = sessionData?.session?.user?.id;
-      if (!userId) return;
+      const userId = await getUserId();
+      const token = await getAccessToken();
+      if (!userId || !token) return;
 
       const dbData: Record<string, string> = {};
       for (const [key, value] of Object.entries(data)) {
@@ -71,13 +95,19 @@ export function useGeminiChat() {
       }
       if (Object.keys(dbData).length === 0) return;
 
-      const { error } = await supabase
-        .from("user_onboarding_profiles")
-        .upsert(
-          { user_id: userId, ...dbData, updated_at: new Date().toISOString() },
-          { onConflict: "user_id" }
-        );
-      if (error) console.error("Profile sync error:", error);
+      const body = { user_id: userId, ...dbData, updated_at: new Date().toISOString() };
+
+      await fetch(`${CLOUD_REST_URL}/user_onboarding_profiles?on_conflict=user_id`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: CLOUD_ANON_KEY,
+          Authorization: `Bearer ${token}`,
+          Prefer: "resolution=merge-duplicates",
+          "Content-Profile": "public",
+        },
+        body: JSON.stringify(body),
+      });
     } catch (err) {
       console.error("Profile sync error:", err);
     }
@@ -105,7 +135,7 @@ export function useGeminiChat() {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        Authorization: `Bearer ${CLOUD_ANON_KEY}`,
       },
       body: JSON.stringify({
         messages: apiMessages,
@@ -161,7 +191,6 @@ export function useGeminiChat() {
       }
     }
 
-    // Extract and clean profile updates
     const cleanText = extractProfileUpdates(fullText);
     if (cleanText !== fullText) {
       setMessages((prev) =>
@@ -217,7 +246,6 @@ export function useGeminiChat() {
         }
       }
 
-      // Free chat — call AI
       const staticIds = new Set(["welcome", "upload-hint"]);
       const apiMessages = messages
         .filter((m) => !staticIds.has(m.id))
@@ -254,7 +282,6 @@ export function useGeminiChat() {
     setIsLoading(true);
     const fileNames = files.map((f) => f.name);
 
-    // Show user message
     const userMsgId = Date.now().toString();
     setMessages((prev) => [
       ...prev,
@@ -262,47 +289,33 @@ export function useGeminiChat() {
     ]);
 
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const userId = sessionData?.session?.user?.id;
-      if (!userId) throw new Error("请先登录");
+      const token = await getAccessToken();
+      if (!token) throw new Error("请先登录");
 
-      // If still in ask_stage, auto-transition to free_chat
       if (chatState === "ask_stage") {
         setMessages((prev) => [...prev, UPLOAD_HINT_MESSAGE]);
         setChatState("free_chat");
       }
 
       for (const file of files) {
-        const filePath = `${userId}/${Date.now()}_${file.name}`;
-
-        // Upload to storage
-        const { error: uploadError } = await supabase.storage
-          .from("onboarding-documents")
-          .upload(filePath, file);
-
-        if (uploadError) {
-          throw new Error(`文件上传失败：${uploadError.message}`);
-        }
-
-        // Show parsing indicator
         const parsingMsgId = (Date.now() + 1).toString();
         setMessages((prev) => [
           ...prev,
           { id: parsingMsgId, role: "ai", content: `正在解析 "${file.name}"，请稍候... 🔍` },
         ]);
 
-        // Call parse edge function
+        // Send file directly to edge function as FormData
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("profileData", JSON.stringify(profileDataRef.current));
+
         const resp = await fetch(PARSE_URL, {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            Authorization: `Bearer ${token}`,
+            apikey: CLOUD_ANON_KEY,
           },
-          body: JSON.stringify({
-            filePath,
-            fileName: file.name,
-            profileData: profileDataRef.current,
-          }),
+          body: formData,
         });
 
         if (!resp.ok) {
@@ -313,7 +326,6 @@ export function useGeminiChat() {
         const { content } = await resp.json();
         const cleanContent = extractProfileUpdates(content);
 
-        // Replace parsing indicator with actual result
         setMessages((prev) =>
           prev.map((m) =>
             m.id === parsingMsgId ? { ...m, content: cleanContent } : m
