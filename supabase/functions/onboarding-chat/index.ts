@@ -10,8 +10,11 @@ Deno.serve(async (req) => {
 
   try {
     const { messages, profileData } = await req.json();
-    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured");
+    const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+
+    if (!ANTHROPIC_API_KEY) {
+      throw new Error("ANTHROPIC_API_KEY is not configured");
+    }
 
     const filledFields = Object.entries(profileData || {})
       .filter(([_, v]) => v)
@@ -85,52 +88,33 @@ ${filledFields || "（暂无）"}
 ### 6. 完成度与总结
 - 信息采集达到 60% 或用户要求时，生成结构化档案摘要`;
 
-    const contents = messages.map((msg: any) => ({
-      role: msg.role === "assistant" ? "model" : "user",
-      parts: [{ text: msg.role === "system" ? msg.content : msg.content }]
-    }));
+    const claudeMessages = messages
+      .filter((msg: any) => msg.role !== "system")
+      .map((msg: any) => ({
+        role: msg.role === "assistant" ? "assistant" : "user",
+        content: msg.content
+      }));
 
-    if (messages[0]?.role !== "system") {
-      contents.unshift({
-        role: "user",
-        parts: [{ text: systemPrompt }]
-      });
-      contents.splice(1, 0, {
-        role: "model",
-        parts: [{ text: "明白了，我会按照这些准则来协助用户完成留学申请档案。" }]
-      });
-    } else {
-      contents[0] = {
-        role: "user",
-        parts: [{ text: systemPrompt }]
-      };
-      contents.splice(1, 0, {
-        role: "model",
-        parts: [{ text: "明白了，我会按照这些准则来协助用户完成留学申请档案。" }]
-      });
-    }
-
-    console.log("Using Gemini API key:", GEMINI_API_KEY ? `${GEMINI_API_KEY.slice(0, 10)}...` : "undefined");
-
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?key=${GEMINI_API_KEY}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents,
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 2048,
-          },
-        }),
-      }
-    );
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-3-5-sonnet-20241022",
+        max_tokens: 2048,
+        temperature: 0.7,
+        system: systemPrompt,
+        messages: claudeMessages,
+        stream: true,
+      }),
+    });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("Gemini API error:", response.status, errorText);
-      console.error("API URL:", `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent`);
+      console.error("Claude API error:", response.status, errorText);
 
       if (response.status === 429) {
         return new Response(
@@ -154,29 +138,44 @@ ${filledFields || "（暂无）"}
     const stream = new ReadableStream({
       async start(controller) {
         try {
+          let buffer = "";
+
           while (true) {
             const { done, value } = await reader.read();
             if (done) break;
 
-            const chunk = decoder.decode(value, { stream: true });
-            const lines = chunk.split("\n").filter(line => line.trim());
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n");
+            buffer = lines.pop() || "";
 
             for (const line of lines) {
+              if (!line.trim() || !line.startsWith("data: ")) continue;
+
+              const data = line.slice(6);
+              if (data === "[DONE]") continue;
+
               try {
-                const json = JSON.parse(line);
-                const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
-                if (text) {
-                  const sseData = `data: ${JSON.stringify({
-                    choices: [{ delta: { content: text } }]
-                  })}\n\n`;
-                  controller.enqueue(encoder.encode(sseData));
+                const json = JSON.parse(data);
+
+                if (json.type === "content_block_delta") {
+                  const text = json.delta?.text;
+                  if (text) {
+                    const sseData = `data: ${JSON.stringify({
+                      choices: [{ delta: { content: text } }]
+                    })}\n\n`;
+                    controller.enqueue(encoder.encode(sseData));
+                  }
                 }
-              } catch {}
+              } catch (e) {
+                console.error("Parse error:", e);
+              }
             }
           }
+
           controller.enqueue(encoder.encode("data: [DONE]\n\n"));
           controller.close();
         } catch (e) {
+          console.error("Stream error:", e);
           controller.error(e);
         }
       },
@@ -186,7 +185,7 @@ ${filledFields || "（暂无）"}
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
   } catch (e) {
-    console.error("chat error:", e);
+    console.error("Chat error:", e);
     return new Response(
       JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
