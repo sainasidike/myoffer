@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Paperclip, FileText, ArrowRight, Loader2, Cpu } from "lucide-react";
+import { Paperclip, FileText, ArrowRight, Loader as Loader2, Cpu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useGeminiChat } from "@/hooks/useGeminiChat";
@@ -102,7 +102,11 @@ export default function OnboardingChat() {
               <div className="text-sm font-semibold text-foreground font-mono">MyOffer AI 顾问</div>
               <div className="text-xs text-muted-foreground">正在收集你的申请信息</div>
             </div>
-            <div className="relative">
+            {/* Mobile Progress Indicator */}
+            <div className="lg:hidden flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
+              <span className="text-xs font-semibold text-primary font-mono">{completionPct}%</span>
+            </div>
+            <div className="relative hidden lg:block">
               <div className="w-2.5 h-2.5 rounded-full bg-success" />
               <div className="absolute inset-0 w-2.5 h-2.5 rounded-full bg-success cyber-ping" />
             </div>
@@ -150,25 +154,12 @@ export default function OnboardingChat() {
               </div>
             )}
 
-            {/* Upload hint zone */}
-            {messages.some((m) => m.id === "upload-hint") && !messages.some((m) => m.role === "user" && messages.indexOf(m) > messages.findIndex((x) => x.id === "upload-hint")) && (
-              <div
-                className="glass-card rounded-xl px-4 py-3 flex items-center gap-2 cursor-pointer hover:border-primary/40 transition-all duration-300 laser-scan"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <FileText className="w-4 h-4 text-primary" />
-                <span className="text-sm text-primary font-mono">
-                  支持拖入 PDF、图片、Word 文档，AI 自动解析
-                </span>
-              </div>
-            )}
-
             <div ref={chatEndRef} />
           </div>
 
           {/* Input Bar */}
           <div className="px-6 py-4 border-t border-border glass">
-            <div className="flex items-center gap-2 max-w-4xl mx-auto">
+            <div className="flex items-center gap-3 max-w-4xl mx-auto">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -177,19 +168,23 @@ export default function OnboardingChat() {
                 multiple
                 onChange={handleFileUpload}
               />
+
+              {/* Upload Materials Button */}
               <Button
-                variant="ghost"
-                size="icon"
-                className="shrink-0 text-muted-foreground hover:text-primary hover:bg-primary/10"
+                variant="outline"
+                className="shrink-0 gap-2 border-primary/30 bg-primary/5 hover:bg-primary/10 text-primary"
                 onClick={() => fileInputRef.current?.click()}
               >
-                <Paperclip className="w-5 h-5" />
+                <Paperclip className="w-4 h-4" />
+                <span className="text-sm font-medium hidden md:inline">支持拖入 PDF、图片、Word 文档，AI 自动解析</span>
+                <span className="text-sm font-medium md:hidden">上传材料</span>
               </Button>
+
               <Input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSend()}
-                placeholder="输入回复，或上传文件..."
+                placeholder="输入回复..."
                 className="flex-1 bg-secondary/50 border-border focus:border-primary/50 focus:ring-primary/20"
                 disabled={isLoading}
               />
@@ -197,7 +192,7 @@ export default function OnboardingChat() {
                 size="icon"
                 onClick={handleSend}
                 disabled={!input.trim() || isLoading}
-                className="bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30"
+                className="bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30 shrink-0"
               >
                 {isLoading ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -211,48 +206,65 @@ export default function OnboardingChat() {
 
         {/* Right Panel */}
         <div className="w-[280px] border-l border-border p-5 space-y-5 overflow-y-auto hidden lg:block">
-          {/* Ring progress */}
-          <div className="glass-card rounded-xl p-5 space-y-4">
-            <div className="text-sm font-semibold text-foreground font-mono">档案完整度</div>
-            <div className="flex justify-center py-2">
-              <RingProgress percentage={completionPct} />
+          {/* Compact Progress Header */}
+          <div className="glass-card rounded-xl p-4">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-semibold text-foreground font-mono">档案完整度</span>
+              <span className="text-2xl font-bold text-primary font-mono">{completionPct}%</span>
             </div>
-            <div className="space-y-2.5 pt-1">
-              {profileFields.map((f) => (
-                <div key={f.key} className="flex items-center gap-2.5 text-sm">
-                  <HexStatus status={profileData[f.key] ? "filled" : "empty"} />
-                  <span className={profileData[f.key] ? "text-foreground" : "text-muted-foreground"}>
-                    {f.label}
+            <div className="w-full bg-secondary/30 rounded-full h-2 overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-primary/70 to-primary transition-all duration-500 rounded-full"
+                style={{ width: `${completionPct}%` }}
+              />
+            </div>
+            <div className="mt-3 text-xs text-muted-foreground">
+              已完成 {filledCount}/{profileFields.length} 项
+            </div>
+          </div>
+
+          {/* Detailed Field List */}
+          <div className="glass-card rounded-xl p-4 space-y-2.5">
+            {profileFields.map((f) => (
+              <div key={f.key} className="flex items-center gap-2.5 text-sm">
+                <HexStatus status={profileData[f.key] ? "filled" : "empty"} />
+                <span className={profileData[f.key] ? "text-foreground" : "text-muted-foreground"}>
+                  {f.label}
+                </span>
+                {profileData[f.key] && (
+                  <span className="ml-auto text-xs text-primary font-mono truncate max-w-[80px]">
+                    {typeof profileData[f.key] === "object" ? JSON.stringify(profileData[f.key]) : profileData[f.key]}
                   </span>
-                  {profileData[f.key] && (
-                    <span className="ml-auto text-xs text-primary font-mono truncate max-w-[80px]">
-                      {typeof profileData[f.key] === "object" ? JSON.stringify(profileData[f.key]) : profileData[f.key]}
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
+                )}
+              </div>
+            ))}
           </div>
 
           {/* Uploaded materials */}
           <div className="glass-card rounded-xl p-4 space-y-3">
-            <div className="text-sm font-semibold text-foreground font-mono">上传的材料</div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-semibold text-foreground font-mono">上传的材料</span>
+              {uploadedFiles.length > 0 && (
+                <span className="text-xs text-primary font-mono">{uploadedFiles.length} 个文件</span>
+              )}
+            </div>
             {uploadedFiles.length > 0 ? (
-              <div className="space-y-2">
+              <div className="space-y-2 max-h-60 overflow-y-auto">
                 {uploadedFiles.map((name, i) => (
                   <div
                     key={i}
-                    className="text-xs text-foreground bg-secondary/50 border border-border rounded-lg px-3 py-2 truncate font-mono"
+                    className="text-xs text-foreground bg-secondary/50 border border-border rounded-lg px-3 py-2 truncate font-mono flex items-center gap-2"
                   >
-                    📎 {name}
+                    <FileText className="w-3.5 h-3.5 text-primary shrink-0" />
+                    <span className="truncate">{name}</span>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="border border-dashed border-border rounded-lg p-6 text-center">
-                <FileText className="w-8 h-8 mx-auto text-muted-foreground/50 mb-2" />
+              <div className="border border-dashed border-border/50 rounded-lg p-5 text-center">
+                <FileText className="w-7 h-7 mx-auto text-muted-foreground/40 mb-2" />
                 <p className="text-xs text-muted-foreground">暂无上传文件</p>
-                <p className="text-xs text-muted-foreground mt-1">点击附件按钮或拖拽上传</p>
+                <p className="text-xs text-muted-foreground/70 mt-1">点击下方按钮或拖拽上传</p>
               </div>
             )}
           </div>
