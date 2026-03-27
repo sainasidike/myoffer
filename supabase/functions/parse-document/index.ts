@@ -27,22 +27,22 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    // Extract JWT to get user ID
+    // Extract user ID from JWT (no verification — gateway handles auth)
     const authHeader = req.headers.get("authorization") || "";
     const token = authHeader.replace("Bearer ", "");
+    const payload = decodeJwtPayload(token);
+    const userId = payload?.sub as string | undefined;
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    // Verify user
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
-    if (userError || !user) {
+    if (!userId) {
       return new Response(
         JSON.stringify({ error: "未授权，请先登录" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
