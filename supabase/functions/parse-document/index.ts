@@ -1,15 +1,4 @@
-import { createClient } from "npm:@supabase/supabase-js@2";
-
-function decodeJwtPayload(token: string): Record<string, unknown> | null {
-  try {
-    const parts = token.split(".");
-    if (parts.length !== 3) return null;
-    const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
-    return payload;
-  } catch {
-    return null;
-  }
-}
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -17,31 +6,128 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS")
-    return new Response(null, { headers: corsHeaders });
+function extractTextFromPDF(buffer: ArrayBuffer): string {
+  const uint8 = new Uint8Array(buffer);
+  const decoder = new TextDecoder();
+  const text = decoder.decode(uint8);
 
-  try {
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+  const textChunks: string[] = [];
+  const matches = text.match(/\(([^)]+)\)/g);
 
-    // Extract user ID from JWT (no verification — gateway handles auth)
-    const authHeader = req.headers.get("authorization") || "";
-    const token = authHeader.replace("Bearer ", "");
-    const payload = decodeJwtPayload(token);
-    const userId = payload?.sub as string | undefined;
+  if (matches) {
+    for (const match of matches) {
+      const content = match.slice(1, -1);
+      if (content.length > 0 && /[a-zA-Z0-9\u4e00-\u9fa5]/.test(content)) {
+        textChunks.push(content);
+      }
+    }
+  }
 
-    if (!userId) {
-      return new Response(
-        JSON.stringify({ error: "未授权，请先登录" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+  return textChunks.join(' ').slice(0, 5000);
+}
+
+function analyzeDocument(fileName: string, content: string, profileData: Record<string, any>): {
+  summary: string;
+  updates: Record<string, string>;
+} {
+  const lower = content.toLowerCase();
+  const updates: Record<string, string> = {};
+  let docType = "未知文档";
+  const findings: string[] = [];
+
+  if (lower.includes("transcript") || lower.includes("成绩单") || lower.includes("grade")) {
+    docType = "成绩单";
+
+    const gpaMatch = content.match(/GPA[:\s]*([0-9.]+)/i);
+    if (gpaMatch && !profileData.gpa) {
+      updates.gpa = gpaMatch[1];
+      findings.push(`GPA: ${gpaMatch[1]}`);
     }
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const schoolMatch = content.match(/(?:学校|University|College)[:\s]*([^\n]+)/i);
+    if (schoolMatch && !profileData.school) {
+      const schoolName = schoolMatch[1].trim().slice(0, 50);
+      updates.school = schoolName;
+      findings.push(`就读学校: ${schoolName}`);
+    }
 
+    const majorMatch = content.match(/(?:专业|Major)[:\s]*([^\n]+)/i);
+    if (majorMatch && !profileData.major) {
+      const majorName = majorMatch[1].trim().slice(0, 50);
+      updates.major = majorName;
+      findings.push(`专业: ${majorName}`);
+    }
+  }
+
+  else if (lower.includes("toefl") || lower.includes("ielts") || lower.includes("托福") || lower.includes("雅思")) {
+    docType = "语言成绩单";
+
+    const toeflMatch = content.match(/(?:TOEFL|托福)[:\s]*([0-9]+)/i);
+    const ieltsMatch = content.match(/(?:IELTS|雅思)[:\s]*([0-9.]+)/i);
+
+    if (toeflMatch && !profileData.languageScore) {
+      updates.languageType = "TOEFL";
+      updates.languageScore = toeflMatch[1];
+      findings.push(`TOEFL: ${toeflMatch[1]}`);
+    } else if (ieltsMatch && !profileData.languageScore) {
+      updates.languageType = "IELTS";
+      updates.languageScore = ieltsMatch[1];
+      findings.push(`IELTS: ${ieltsMatch[1]}`);
+    }
+  }
+
+  else if (lower.includes("gre") || lower.includes("gmat")) {
+    docType = "GRE/GMAT 成绩单";
+
+    const greMatch = content.match(/(?:GRE)[:\s]*([0-9]+)/i);
+    const gmatMatch = content.match(/(?:GMAT)[:\s]*([0-9]+)/i);
+
+    if (greMatch && !profileData.greGmat) {
+      updates.greGmat = `GRE ${greMatch[1]}`;
+      findings.push(`GRE: ${greMatch[1]}`);
+    } else if (gmatMatch && !profileData.greGmat) {
+      updates.greGmat = `GMAT ${gmatMatch[1]}`;
+      findings.push(`GMAT: ${gmatMatch[1]}`);
+    }
+  }
+
+  else if (lower.includes("resume") || lower.includes("cv") || lower.includes("简历")) {
+    docType = "个人简历";
+    findings.push("包含个人背景和经历信息");
+
+    if ((lower.includes("intern") || lower.includes("实习")) && !profileData.internship) {
+      updates.internship = "有实习经历";
+      findings.push("发现实习经历");
+    }
+
+    if ((lower.includes("research") || lower.includes("科研")) && !profileData.research) {
+      updates.research = "有科研经历";
+      findings.push("发现科研经历");
+    }
+  }
+
+  else if (lower.includes("award") || lower.includes("certificate") || lower.includes("获奖") || lower.includes("证书")) {
+    docType = "获奖证书";
+    findings.push("包含获奖信息");
+
+    if (!profileData.awards) {
+      updates.awards = "有获奖经历";
+    }
+  }
+
+  const summary = findings.length > 0
+    ? `我识别出这是一份${docType}。从中提取到以下信息：\n${findings.map(f => `• ${f}`).join('\n')}\n\n如果有更多材料，欢迎继续上传！`
+    : `收到你上传的 ${fileName}。这看起来是一份${docType}，但我暂时无法从中提取更多结构化信息。如果这是图片格式，建议上传 PDF 文档以获得更好的解析效果。`;
+
+  return { summary, updates };
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 200, headers: corsHeaders });
+  }
+
+  try {
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
     const profileDataStr = formData.get("profileData") as string | null;
@@ -55,100 +141,30 @@ Deno.serve(async (req) => {
     }
 
     const fileName = file.name;
+    const fileExt = fileName.toLowerCase().split('.').pop() || '';
 
-    // Save file to storage
-    const filePath = `${userId}/${Date.now()}_${fileName}`;
-    const { error: uploadError } = await supabase.storage
-      .from("onboarding-documents")
-      .upload(filePath, file);
+    let extractedText = "";
 
-    if (uploadError) {
-      console.error("Storage upload error:", uploadError);
-      // Continue even if storage fails — we can still parse the file
-    }
-
-    // Convert file to base64
-    const arrayBuffer = await file.arrayBuffer();
-    const uint8 = new Uint8Array(arrayBuffer);
-    let binary = "";
-    for (let i = 0; i < uint8.length; i++) {
-      binary += String.fromCharCode(uint8[i]);
-    }
-    const base64 = btoa(binary);
-
-    // Determine MIME type
-    const ext = fileName.toLowerCase().split(".").pop() || "";
-    const mimeMap: Record<string, string> = {
-      pdf: "application/pdf",
-      png: "image/png",
-      jpg: "image/jpeg",
-      jpeg: "image/jpeg",
-      doc: "application/msword",
-      docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    };
-    const mimeType = mimeMap[ext] || file.type || "application/octet-stream";
-
-    const filledFields = Object.entries(profileData)
-      .filter(([_, v]) => v)
-      .map(([k, v]) => `${k}: ${v}`)
-      .join("\n");
-
-    const systemPrompt = `你是一个专业的留学申请文档解析助手。用户上传了一份文件（${fileName}），请仔细分析文件内容，提取所有与留学申请相关的信息。
-
-## 当前已收集的信息
-${filledFields || "（暂无）"}
-
-## 任务
-1. 识别文档类型（成绩单、简历、获奖证书、语言成绩单等）
-2. 提取所有可用信息并清晰列出
-3. 用友好的语气总结你发现的内容
-
-## 数据同步规则
-- 在回复末尾另起一行用以下格式标注提取到的字段：
-  <<<PROFILE_UPDATE:{"字段名":"值"}>>>
-- 可用字段名：targetDegree, currentEducation, school, major, crossMajor, gpa, languageType, languageScore, greGmat, internship, research, awards, entrepreneurship, volunteer, overseas, otherActivities, targetCountry, budget, targetYear, scholarship, rankingReq, specialNeeds
-- 只提取文档中明确包含的信息
-- 用户看不到<<<PROFILE_UPDATE>>>标记`;
-
-    const messages = [
-      { role: "system", content: systemPrompt },
-      {
-        role: "user",
-        content: [
-          { type: "text", text: `请解析我上传的文件：${fileName}` },
-          {
-            type: "image_url",
-            image_url: { url: `data:${mimeType};base64,${base64}` },
-          },
-        ],
-      },
-    ];
-
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages,
-        temperature: 0.3,
-        max_tokens: 4096,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("AI Gateway error:", response.status, errorText);
+    if (fileExt === 'pdf') {
+      const arrayBuffer = await file.arrayBuffer();
+      extractedText = extractTextFromPDF(arrayBuffer);
+    } else if (['txt', 'doc', 'docx'].includes(fileExt)) {
+      extractedText = await file.text();
+    } else {
       return new Response(
-        JSON.stringify({ error: "AI 解析服务暂时不可用" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({
+          content: `收到文件 ${fileName}。目前仅支持 PDF 和文本文档的自动解析。图片文件需要更高级的 OCR 功能，建议上传 PDF 格式的文档以获得最佳解析效果。`
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const result = await response.json();
-    const content = result.choices?.[0]?.message?.content || "无法解析文档内容";
+    const { summary, updates } = analyzeDocument(fileName, extractedText, profileData);
+
+    let content = summary;
+    if (Object.keys(updates).length > 0) {
+      content += `\n<<<PROFILE_UPDATE:${JSON.stringify(updates)}>>>`;
+    }
 
     return new Response(
       JSON.stringify({ content }),
@@ -157,7 +173,10 @@ ${filledFields || "（暂无）"}
   } catch (e) {
     console.error("Parse error:", e);
     return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
+      JSON.stringify({
+        error: e instanceof Error ? e.message : "文件解析失败",
+        content: "抱歉，文件解析遇到问题。请确保上传的是有效的 PDF 或文本文档。"
+      }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
