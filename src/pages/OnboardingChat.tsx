@@ -179,8 +179,8 @@ export default function OnboardingChat() {
             <div className="space-y-2.5 pt-1">
               {profileFields.map((f) => (
                 <div key={f.key} className="flex items-center gap-2.5 text-sm">
-                  <div className="w-2.5 h-2.5 rounded-full bg-muted-foreground/30" />
-                  <span className="text-muted-foreground">{f.label}</span>
+                  <div className={`w-2.5 h-2.5 rounded-full ${profileData[f.key] ? "bg-primary" : "bg-muted-foreground/30"}`} />
+                  <span className={profileData[f.key] ? "text-foreground" : "text-muted-foreground"}>{f.label}</span>
                 </div>
               ))}
             </div>
