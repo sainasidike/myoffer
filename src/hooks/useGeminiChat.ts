@@ -1,5 +1,4 @@
 import { useState, useCallback, useRef } from "react";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface ChatMessage {
@@ -11,9 +10,7 @@ export interface ChatMessage {
 const PARSE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parse-document`;
 const CLOUD_REST_URL = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1`;
 const CLOUD_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY || "");
-const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
 
 const FIELD_TO_COLUMN: Record<string, string> = {
   targetDegree: "target_degree",
@@ -187,33 +184,45 @@ ${filledFields || "(暂无)"}
 
 请问您考的是托福还是雅思？分数是多少？`;
 
-    const history = apiMessages.map((msg) => ({
+    const contents = apiMessages.map((msg) => ({
       role: msg.role === "assistant" ? "model" : "user",
       parts: [{ text: msg.content }],
     }));
 
-    const chat = model.startChat({
-      history,
-      generationConfig: {
-        maxOutputTokens: 1000,
-        temperature: 0.7,
-      },
+    contents.unshift({
+      role: "user",
+      parts: [{ text: systemPrompt }],
+    });
+    contents.splice(1, 0, {
+      role: "model",
+      parts: [{ text: "明白了，我会按照这些准则来协助用户完成留学申请档案。" }],
     });
 
-    const aiMsgId = (Date.now() + 1).toString();
-    setMessages((prev) => [...prev, { id: aiMsgId, role: "ai", content: "" }]);
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents,
+          generationConfig: {
+            maxOutputTokens: 1000,
+            temperature: 0.7,
+          },
+        }),
+      }
+    );
 
-    let fullText = "";
-    const lastUserMessage = apiMessages[apiMessages.length - 1]?.content || "";
-    const result = await chat.sendMessageStream(systemPrompt + "\n\n用户消息：" + lastUserMessage);
-
-    for await (const chunk of result.stream) {
-      const chunkText = chunk.text();
-      fullText += chunkText;
-      setMessages((prev) =>
-        prev.map((m) => (m.id === aiMsgId ? { ...m, content: fullText } : m))
-      );
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Gemini API error: ${response.status} ${errorText}`);
     }
+
+    const data = await response.json();
+    const fullText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+
+    const aiMsgId = (Date.now() + 1).toString();
+    setMessages((prev) => [...prev, { id: aiMsgId, role: "ai", content: fullText }]);
 
     const cleanText = extractProfileUpdates(fullText);
     if (cleanText !== fullText) {
