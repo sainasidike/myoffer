@@ -262,8 +262,8 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
-    if (!GROQ_API_KEY) throw new Error("GROQ_API_KEY is not configured");
+    const DEEPSEEK_API_KEY = Deno.env.get("DEEPSEEK_API_KEY");
+    if (!DEEPSEEK_API_KEY) throw new Error("DEEPSEEK_API_KEY is not configured");
 
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -400,15 +400,15 @@ ${profileSummary}
 只返回JSON数组，不要其他文字。`;
 
       const aiResp = await fetch(
-        "https://api.groq.com/openai/v1/chat/completions",
+        "https://api.deepseek.com/v1/chat/completions",
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${GROQ_API_KEY}`,
+            "Authorization": `Bearer ${DEEPSEEK_API_KEY}`,
           },
           body: JSON.stringify({
-            model: "llama-3.3-70b-versatile",
+            model: "deepseek-chat",
             messages: [
               {
                 role: "system",

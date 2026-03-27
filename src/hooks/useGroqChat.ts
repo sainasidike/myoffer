@@ -1,6 +1,5 @@
 import { useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import Groq from "groq-sdk";
 
 export interface ChatMessage {
   id: string;
@@ -11,12 +10,7 @@ export interface ChatMessage {
 const PARSE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parse-document`;
 const CLOUD_REST_URL = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1`;
 const CLOUD_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY || "";
-
-const groq = new Groq({
-  apiKey: GROQ_API_KEY,
-  dangerouslyAllowBrowser: true,
-});
+const DEEPSEEK_API_KEY = import.meta.env.VITE_DEEPSEEK_API_KEY || "";
 
 const FIELD_TO_COLUMN: Record<string, string> = {
   targetDegree: "target_degree",
@@ -188,7 +182,7 @@ ${filledFields || "(暂无)"}
 
 请问您考的是托福还是雅思？分数是多少？`;
 
-    const groqMessages = [
+    const messages = [
       { role: "system", content: systemPrompt },
       ...apiMessages.map((msg) => ({
         role: msg.role as "user" | "assistant",
@@ -196,14 +190,27 @@ ${filledFields || "(暂无)"}
       })),
     ];
 
-    const completion = await groq.chat.completions.create({
-      messages: groqMessages,
-      model: "llama-3.3-70b-versatile",
-      temperature: 0.7,
-      max_tokens: 1000,
+    const response = await fetch("https://api.deepseek.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${DEEPSEEK_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: "deepseek-chat",
+        messages,
+        temperature: 0.7,
+        max_tokens: 1000,
+      }),
     });
 
-    const fullText = completion.choices[0]?.message?.content || "";
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`DeepSeek API error: ${response.status} ${errorText}`);
+    }
+
+    const data = await response.json();
+    const fullText = data.choices?.[0]?.message?.content || "";
 
     const aiMsgId = (Date.now() + 1).toString();
     setMessages((prev) => [...prev, { id: aiMsgId, role: "ai", content: fullText }]);
