@@ -12,34 +12,62 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
 
   try {
-    const { filePath, fileName, profileData } = await req.json();
-    
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+
+    // Extract JWT to get user ID
+    const authHeader = req.headers.get("authorization") || "";
+    const token = authHeader.replace("Bearer ", "");
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Download file from storage
-    const { data: fileData, error: downloadError } = await supabase.storage
-      .from("onboarding-documents")
-      .download(filePath);
-
-    if (downloadError || !fileData) {
-      console.error("Download error:", downloadError);
+    // Verify user
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+    if (userError || !user) {
       return new Response(
-        JSON.stringify({ error: "文件下载失败，请重新上传" }),
+        JSON.stringify({ error: "未授权，请先登录" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const formData = await req.formData();
+    const file = formData.get("file") as File | null;
+    const profileDataStr = formData.get("profileData") as string | null;
+    const profileData = profileDataStr ? JSON.parse(profileDataStr) : {};
+
+    if (!file) {
+      return new Response(
+        JSON.stringify({ error: "未收到文件" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
+    const fileName = file.name;
+
+    // Save file to storage
+    const filePath = `${user.id}/${Date.now()}_${fileName}`;
+    const { error: uploadError } = await supabase.storage
+      .from("onboarding-documents")
+      .upload(filePath, file);
+
+    if (uploadError) {
+      console.error("Storage upload error:", uploadError);
+      // Continue even if storage fails — we can still parse the file
+    }
+
     // Convert file to base64
-    const arrayBuffer = await fileData.arrayBuffer();
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
-    
+    const arrayBuffer = await file.arrayBuffer();
+    const uint8 = new Uint8Array(arrayBuffer);
+    let binary = "";
+    for (let i = 0; i < uint8.length; i++) {
+      binary += String.fromCharCode(uint8[i]);
+    }
+    const base64 = btoa(binary);
+
     // Determine MIME type
-    const ext = fileName.toLowerCase().split(".").pop();
+    const ext = fileName.toLowerCase().split(".").pop() || "";
     const mimeMap: Record<string, string> = {
       pdf: "application/pdf",
       png: "image/png",
@@ -48,9 +76,9 @@ serve(async (req) => {
       doc: "application/msword",
       docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     };
-    const mimeType = mimeMap[ext || ""] || "application/octet-stream";
+    const mimeType = mimeMap[ext] || file.type || "application/octet-stream";
 
-    const filledFields = Object.entries(profileData || {})
+    const filledFields = Object.entries(profileData)
       .filter(([_, v]) => v)
       .map(([k, v]) => `${k}: ${v}`)
       .join("\n");
