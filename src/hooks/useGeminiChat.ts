@@ -10,7 +10,6 @@ export interface ChatMessage {
 const PARSE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parse-document`;
 const CLOUD_REST_URL = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1`;
 const CLOUD_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
 
 const FIELD_TO_COLUMN: Record<string, string> = {
   targetDegree: "target_degree",
@@ -124,105 +123,63 @@ export function useGeminiChat() {
   }, [syncProfileToDb]);
 
   const callAI = useCallback(async (apiMessages: Array<{ role: string; content: string }>) => {
-    const filledFields = Object.entries(profileDataRef.current || {})
-      .filter(([_, v]) => v)
-      .map(([k, v]) => `${k}: ${v}`)
-      .join("\n");
+    const token = await getAccessToken();
+    if (!token) throw new Error("请先登录");
 
-    const systemPrompt = `## 角色
-你是一个专业的留学申请助手（MyOffer AI 顾问），服务于中国学生的留学申请。
+    const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/onboarding-chat`;
 
-## 重要：你已经完成了以下步骤，严禁重复
-1. 你已经提示过用户可以上传材料（成绩单、简历等），严禁再次提示。
-
-## 任务
-- 根据用户上传的材料和对话，收集以下申请信息
-- **每次只问一个问题**，不要一次问多个问题
-- 已收集的字段不要重复询问
-- 使用友好、专业的语气
-
-## 必收集字段（priority）
-- targetDegree: 申请阶段（本科/硕士/博士）
-- currentEducation: 当前学历
-- school: 学校
-- major: 专业
-- gpa: GPA
-- languageType: 语言考试类型（托福/雅思/等）
-- languageScore: 语言考试分数
-- targetCountry: 目标国家
-
-## 可选字段
-- crossMajor: 是否跨专业
-- greGmat: GRE/GMAT 分数
-- internship: 实习经历
-- research: 科研经历
-- awards: 获奖情况
-- entrepreneurship: 创业经历
-- volunteer: 志愿者经历
-- overseas: 海外交流经历
-- otherActivities: 其他活动
-- budget: 预算
-- targetYear: 目标入学年份
-- scholarship: 是否需要奖学金
-- rankingReq: 排名要求
-- specialNeeds: 特殊需求
-
-## 已收集字段
-${filledFields || "(暂无)"}
-
-## 交互规则
-1. **每次只问一个问题**
-2. 根据优先级顺序询问必收集字段
-3. 已收集的字段不要再问
-4. 当你识别到新的信息时，使用以下格式输出：<<<PROFILE_UPDATE:{"字段名":"值"}>>>
-5. 例如：<<<PROFILE_UPDATE:{"gpa":"3.8"}>>>
-6. 信息提取标记会被前端自动处理，不会显示给用户
-
-## 示例对话
-用户：我的 GPA 是 3.8
-你：好的，已记录您的 GPA 为 3.8。<<<PROFILE_UPDATE:{"gpa":"3.8"}>>>
-
-请问您考的是托福还是雅思？分数是多少？`;
-
-    const contents = apiMessages.map((msg) => ({
-      role: msg.role === "assistant" ? "model" : "user",
-      parts: [{ text: msg.content }],
-    }));
-
-    contents.unshift({
-      role: "user",
-      parts: [{ text: systemPrompt }],
+    const response = await fetch(apiUrl, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        apikey: CLOUD_ANON_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        messages: apiMessages,
+        profileData: profileDataRef.current,
+      }),
     });
-    contents.splice(1, 0, {
-      role: "model",
-      parts: [{ text: "明白了，我会按照这些准则来协助用户完成留学申请档案。" }],
-    });
-
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents,
-          generationConfig: {
-            maxOutputTokens: 1000,
-            temperature: 0.7,
-          },
-        }),
-      }
-    );
 
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Gemini API error: ${response.status} ${errorText}`);
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `API error: ${response.status}`);
     }
 
-    const data = await response.json();
-    const fullText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    const reader = response.body?.getReader();
+    if (!reader) throw new Error("No response body");
 
+    const decoder = new TextDecoder();
+    let fullText = "";
     const aiMsgId = (Date.now() + 1).toString();
-    setMessages((prev) => [...prev, { id: aiMsgId, role: "ai", content: fullText }]);
+
+    setMessages((prev) => [...prev, { id: aiMsgId, role: "ai", content: "" }]);
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value, { stream: true });
+      const lines = chunk.split("\n").filter((line) => line.trim());
+
+      for (const line of lines) {
+        if (line.startsWith("data: ")) {
+          const data = line.slice(6);
+          if (data === "[DONE]") continue;
+
+          try {
+            const json = JSON.parse(data);
+            const content = json.choices?.[0]?.delta?.content;
+            if (content) {
+              fullText += content;
+              setMessages((prev) =>
+                prev.map((m) => (m.id === aiMsgId ? { ...m, content: fullText } : m))
+              );
+            }
+          } catch {}
+        }
+      }
+    }
 
     const cleanText = extractProfileUpdates(fullText);
     if (cleanText !== fullText) {
