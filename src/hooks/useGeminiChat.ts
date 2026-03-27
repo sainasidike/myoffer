@@ -6,9 +6,7 @@ export interface ChatMessage {
   content: string;
 }
 
-// Use your own Supabase project URL
-const SUPABASE_URL = "https://aljmasuwwsipaurhqtiv.supabase.co";
-const CHAT_URL = `${SUPABASE_URL}/functions/v1/onboarding-chat`;
+const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/onboarding-chat`;
 
 const INITIAL_MESSAGES: ChatMessage[] = [
   {
@@ -60,7 +58,7 @@ export function useGeminiChat() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer sb_publishable_ihJHlvgroZJpbI45Zuhcyw_IswOcypQ`,
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
         body: JSON.stringify({
           messages: apiMessages,
