@@ -58,7 +58,7 @@ export function useGeminiChat() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer sb_publishable_ihJHlvgroZJpbI45Zuhcyw_IswOcypQ`,
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
         body: JSON.stringify({
           messages: apiMessages,
