@@ -7,23 +7,39 @@ const corsHeaders = {
 };
 
 function extractTextFromPDF(buffer: ArrayBuffer): string {
-  const uint8 = new Uint8Array(buffer);
-  const decoder = new TextDecoder();
-  const text = decoder.decode(uint8);
+  try {
+    const uint8 = new Uint8Array(buffer);
+    const decoder = new TextDecoder('utf-8', { fatal: false });
+    const text = decoder.decode(uint8);
 
-  const textChunks: string[] = [];
-  const matches = text.match(/\(([^)]+)\)/g);
+    const textChunks: string[] = [];
 
-  if (matches) {
-    for (const match of matches) {
-      const content = match.slice(1, -1);
-      if (content.length > 0 && /[a-zA-Z0-9\u4e00-\u9fa5]/.test(content)) {
-        textChunks.push(content);
+    const streamMatch = text.match(/stream\s*(.*?)\s*endstream/gs);
+    if (streamMatch) {
+      for (const stream of streamMatch) {
+        const content = stream.replace(/stream\s*/, '').replace(/\s*endstream/, '');
+        const cleanText = content.replace(/[^\x20-\x7E\u4e00-\u9fa5]/g, ' ');
+        if (cleanText.trim().length > 0) {
+          textChunks.push(cleanText);
+        }
       }
     }
-  }
 
-  return textChunks.join(' ').slice(0, 5000);
+    const parenMatch = text.match(/\(([^)]+)\)/g);
+    if (parenMatch) {
+      for (const match of parenMatch) {
+        const content = match.slice(1, -1);
+        if (content.length > 0 && /[a-zA-Z0-9\u4e00-\u9fa5]/.test(content)) {
+          textChunks.push(content);
+        }
+      }
+    }
+
+    return textChunks.join(' ').slice(0, 10000);
+  } catch (e) {
+    console.error("PDF extraction error:", e);
+    return "";
+  }
 }
 
 function analyzeDocument(fileName: string, content: string, profileData: Record<string, any>): {
@@ -32,7 +48,7 @@ function analyzeDocument(fileName: string, content: string, profileData: Record<
 } {
   const lower = content.toLowerCase();
   const updates: Record<string, string> = {};
-  let docType = "未知文档";
+  let docType = "文档";
   const findings: string[] = [];
 
   if (lower.includes("transcript") || lower.includes("成绩单") || lower.includes("grade")) {
@@ -116,8 +132,8 @@ function analyzeDocument(fileName: string, content: string, profileData: Record<
   }
 
   const summary = findings.length > 0
-    ? `我识别出这是一份${docType}。从中提取到以下信息：\n${findings.map(f => `• ${f}`).join('\n')}\n\n如果有更多材料，欢迎继续上传！`
-    : `收到你上传的 ${fileName}。这看起来是一份${docType}，但我暂时无法从中提取更多结构化信息。如果这是图片格式，建议上传 PDF 文档以获得更好的解析效果。`;
+    ? `我识别出这是一份${docType}。从中提取到以下信息：\n\n${findings.map(f => `• ${f}`).join('\n')}\n\n如果有更多材料，欢迎继续上传！`
+    : `收到你上传的 ${fileName}。我已经接收到这份${docType}。由于文档解析的局限性，我可能无法提取所有信息。如果这是扫描件或图片，建议上传包含可选择文本的 PDF 文档，或者你可以直接在对话中告诉我关键信息。`;
 
   return { summary, updates };
 }
@@ -128,9 +144,14 @@ Deno.serve(async (req) => {
   }
 
   try {
+    console.log("Parse document request received");
+
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
     const profileDataStr = formData.get("profileData") as string | null;
+
+    console.log("File received:", file?.name, "Size:", file?.size);
+
     const profileData = profileDataStr ? JSON.parse(profileDataStr) : {};
 
     if (!file) {
@@ -142,28 +163,61 @@ Deno.serve(async (req) => {
 
     const fileName = file.name;
     const fileExt = fileName.toLowerCase().split('.').pop() || '';
+    const fileSize = file.size;
 
-    let extractedText = "";
+    console.log("Processing file:", fileName, "Extension:", fileExt, "Size:", fileSize);
 
-    if (fileExt === 'pdf') {
-      const arrayBuffer = await file.arrayBuffer();
-      extractedText = extractTextFromPDF(arrayBuffer);
-    } else if (['txt', 'doc', 'docx'].includes(fileExt)) {
-      extractedText = await file.text();
-    } else {
+    if (fileSize > 10 * 1024 * 1024) {
       return new Response(
         JSON.stringify({
-          content: `收到文件 ${fileName}。目前仅支持 PDF 和文本文档的自动解析。图片文件需要更高级的 OCR 功能，建议上传 PDF 格式的文档以获得最佳解析效果。`
+          content: `文件 ${fileName} 太大（${(fileSize / 1024 / 1024).toFixed(2)} MB）。请上传小于 10MB 的文件。`
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
+    let extractedText = "";
+
+    if (fileExt === 'pdf') {
+      console.log("Extracting PDF text");
+      const arrayBuffer = await file.arrayBuffer();
+      extractedText = extractTextFromPDF(arrayBuffer);
+      console.log("Extracted text length:", extractedText.length);
+    } else if (fileExt === 'txt') {
+      extractedText = await file.text();
+      console.log("Read text file, length:", extractedText.length);
+    } else if (['doc', 'docx', 'png', 'jpg', 'jpeg'].includes(fileExt)) {
+      return new Response(
+        JSON.stringify({
+          content: `收到文件 ${fileName}。目前仅支持 PDF 和纯文本文档的自动解析。对于 ${fileExt.toUpperCase()} 格式，建议：\n\n• 将文档转换为 PDF 格式后上传\n• 或直接在对话中告诉我文档中的关键信息\n\n我随时准备为你提供帮助！`
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    } else {
+      return new Response(
+        JSON.stringify({
+          content: `收到文件 ${fileName}。不支持 ${fileExt.toUpperCase()} 格式。请上传 PDF 或 TXT 文件，或者直接在对话中告诉我相关信息。`
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!extractedText || extractedText.trim().length < 10) {
+      return new Response(
+        JSON.stringify({
+          content: `我已收到 ${fileName}，但未能从中提取到文本内容。可能的原因：\n\n• PDF 是扫描件或图片格式\n• 文档加密或受保护\n• 文档格式不标准\n\n建议你直接在对话中告诉我文档的关键信息，或者上传包含可选择文本的 PDF 文档。`
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log("Analyzing document");
     const { summary, updates } = analyzeDocument(fileName, extractedText, profileData);
 
     let content = summary;
     if (Object.keys(updates).length > 0) {
       content += `\n<<<PROFILE_UPDATE:${JSON.stringify(updates)}>>>`;
+      console.log("Profile updates:", updates);
     }
 
     return new Response(
@@ -172,10 +226,11 @@ Deno.serve(async (req) => {
     );
   } catch (e) {
     console.error("Parse error:", e);
+    const errorMessage = e instanceof Error ? e.message : "未知错误";
     return new Response(
       JSON.stringify({
-        error: e instanceof Error ? e.message : "文件解析失败",
-        content: "抱歉，文件解析遇到问题。请确保上传的是有效的 PDF 或文本文档。"
+        error: errorMessage,
+        content: `抱歉，文件解析遇到问题：${errorMessage}。请尝试上传其他格式的文档，或直接在对话中告诉我相关信息。`
       }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

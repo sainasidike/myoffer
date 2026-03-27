@@ -318,13 +318,22 @@ export function useGeminiChat() {
           body: formData,
         });
 
+        const result = await resp.json();
+
         if (!resp.ok) {
-          const errData = await resp.json().catch(() => ({ error: "解析失败" }));
-          throw new Error(errData.error || "解析失败");
+          if (result.content) {
+            const cleanContent = extractProfileUpdates(result.content);
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === parsingMsgId ? { ...m, content: cleanContent } : m
+              )
+            );
+            continue;
+          }
+          throw new Error(result.error || "解析失败");
         }
 
-        const { content } = await resp.json();
-        const cleanContent = extractProfileUpdates(content);
+        const cleanContent = extractProfileUpdates(result.content);
 
         setMessages((prev) =>
           prev.map((m) =>
