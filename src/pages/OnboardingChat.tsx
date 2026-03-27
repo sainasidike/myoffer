@@ -179,12 +179,12 @@ export default function OnboardingChat() {
               {/* Upload Materials Button */}
               <Button
                 variant="outline"
-                className="shrink-0 gap-2 border-gray-300 bg-white hover:bg-gray-50 text-gray-700"
+                size="icon"
+                className="shrink-0 border-gray-300 bg-white hover:bg-gray-50 text-gray-700"
                 onClick={() => fileInputRef.current?.click()}
+                title="上传文件 (支持 PDF、图片、Word 文档)"
               >
                 <Paperclip className="w-4 h-4" />
-                <span className="text-sm font-medium hidden md:inline">支持拖入 PDF、图片、Word 文档，AI 自动解析</span>
-                <span className="text-sm font-medium md:hidden">上传材料</span>
               </Button>
 
               <Input
