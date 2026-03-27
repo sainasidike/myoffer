@@ -39,14 +39,15 @@ const INITIAL_MESSAGES: ChatMessage[] = [
   {
     id: "1",
     role: "ai",
-    content: "你好！我是你的专属留学申请助手，很高兴能为你服务 😊 为了能更好地帮你规划申请，我们先从了解你的背景开始吧。\n\n请问你目前的学历情况是怎样的呢？（比如：本科在读、已毕业、硕士在读等）",
-  },
-  {
-    id: "2",
-    role: "ai",
-    content: "对了，你也可以随时把手头的材料上传给我——比如成绩单、简历、获奖证书等，支持 PDF 和图片格式，可以直接拖拽或点击附件按钮上传，我来帮你自动识别信息 📎",
+    content: "你好！我是你的专属留学申请助手，很高兴能为你服务 😊 为了更好的帮你规划，请你告诉我你想申请的阶段：本科/硕士/博士？",
   },
 ];
+
+const UPLOAD_HINT_MESSAGE: ChatMessage = {
+  id: "upload-hint",
+  role: "ai",
+  content: "对了，你也可以随时把手头的材料上传给我——比如成绩单、简历、获奖证书等，支持 PDF 和图片格式，可以直接拖拽或点击附件按钮上传，我来帮你自动识别信息 📎",
+};
 
 export function useGeminiChat() {
   const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
@@ -88,23 +89,34 @@ export function useGeminiChat() {
       role: "user",
       content: text,
     };
-    setMessages((prev) => [...prev, userMsg]);
+    const isFirstUserMessage = messages.filter((m) => m.role === "user").length === 0;
+
+    // If first message, inject the upload hint before the user message
+    if (isFirstUserMessage) {
+      setMessages((prev) => [...prev, UPLOAD_HINT_MESSAGE, userMsg]);
+    } else {
+      setMessages((prev) => [...prev, userMsg]);
+    }
     setIsLoading(true);
 
     try {
       // Build message history for the API (convert ai->assistant)
-      const apiMessages = [...messages, userMsg]
-        .filter((m) => m.id !== "1" && m.id !== "2") // skip initial static messages
+      const allMsgs = isFirstUserMessage
+        ? [...messages, UPLOAD_HINT_MESSAGE, userMsg]
+        : [...messages, userMsg];
+
+      const apiMessages = allMsgs
+        .filter((m) => m.id !== "1" && m.id !== "upload-hint") // skip static messages
         .map((m) => ({
           role: m.role === "ai" ? "assistant" : "user",
           content: m.content,
         }));
 
       // If this is the first user message, include initial context
-      if (apiMessages.filter((m) => m.role === "user").length === 1) {
+      if (isFirstUserMessage) {
         apiMessages.unshift(
           { role: "assistant", content: INITIAL_MESSAGES[0].content },
-          { role: "assistant", content: INITIAL_MESSAGES[1].content }
+          { role: "assistant", content: UPLOAD_HINT_MESSAGE.content }
         );
       }
 
