@@ -23,15 +23,15 @@ export function AppSidebar() {
   const { profile, signOut } = useAuth();
 
   return (
-    <aside className="flex flex-col w-60 min-h-screen bg-sidebar shrink-0 border-r border-sidebar-border">
+    <aside className="flex flex-col w-60 min-h-screen bg-gray-900 shrink-0 border-r border-gray-800">
       {/* Logo */}
       <div className="flex items-center gap-3 px-5 py-6">
-        <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-primary font-bold text-primary-foreground text-lg font-mono">
+        <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-blue-500 font-bold text-white text-lg">
           M
         </div>
         <div>
-          <div className="text-sidebar-accent-foreground font-semibold text-base tracking-wide font-mono">MyOffer</div>
-          <div className="text-sidebar-foreground text-xs">留学申请平台</div>
+          <div className="text-white font-semibold text-base tracking-wide">MyOffer</div>
+          <div className="text-gray-400 text-xs">留学申请平台</div>
         </div>
       </div>
 
@@ -45,16 +45,15 @@ export function AppSidebar() {
               to={item.path}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 ${
                 active
-                  ? "glass text-primary font-medium shadow-[0_0_15px_rgba(102,252,241,0.1)]"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+                  ? "bg-blue-500 text-white font-medium"
+                  : "text-gray-300 hover:bg-gray-800 hover:text-white"
               }`}
             >
               <item.icon className="w-[18px] h-[18px]" />
               <span>{item.title}</span>
-              {active && (
-                <div className="ml-auto relative">
-                  <div className="w-2 h-2 rounded-full bg-primary" />
-                  <div className="absolute inset-0 w-2 h-2 rounded-full bg-primary cyber-ping" />
+              {item.status === "active" && !active && (
+                <div className="ml-auto">
+                  <div className="w-2 h-2 rounded-full bg-green-500" />
                 </div>
               )}
             </RouterNavLink>
@@ -64,21 +63,21 @@ export function AppSidebar() {
 
       {/* User */}
       <div className="px-3 pb-5">
-        <div className="flex items-center gap-3 px-3 py-3 rounded-lg glass-card">
-          <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/20 text-primary">
+        <div className="flex items-center gap-3 px-3 py-3 rounded-lg bg-gray-800 border border-gray-700">
+          <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-700 text-gray-300">
             <User className="w-4 h-4" />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="text-sidebar-accent-foreground text-sm font-medium truncate">
+            <div className="text-white text-sm font-medium truncate">
               {profile?.username ?? "加载中..."}
             </div>
-            <div className="text-sidebar-foreground text-xs truncate font-mono">
+            <div className="text-gray-400 text-xs truncate">
               {profile?.user_display_id ?? ""}
             </div>
           </div>
           <button
             onClick={signOut}
-            className="text-sidebar-foreground hover:text-destructive transition-colors"
+            className="text-gray-400 hover:text-red-400 transition-colors"
             title="退出登录"
           >
             <LogOut className="w-4 h-4" />
