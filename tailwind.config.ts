@@ -11,6 +11,10 @@ export default {
       screens: { "2xl": "1400px" },
     },
     extend: {
+      fontFamily: {
+        mono: ["JetBrains Mono", "Fira Code", "monospace"],
+        sans: ["Inter", "-apple-system", "BlinkMacSystemFont", "sans-serif"],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -60,6 +64,12 @@ export default {
         purple: {
           DEFAULT: "hsl(var(--purple))",
           foreground: "hsl(var(--purple-foreground))",
+        },
+        cyber: {
+          glow: "hsl(var(--cyber-glow))",
+          blue: "hsl(var(--cyber-blue))",
+          dark: "hsl(var(--cyber-dark))",
+          card: "hsl(var(--cyber-card))",
         },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
