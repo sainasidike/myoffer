@@ -89,23 +89,34 @@ export function useGeminiChat() {
       role: "user",
       content: text,
     };
-    setMessages((prev) => [...prev, userMsg]);
+    const isFirstUserMessage = messages.filter((m) => m.role === "user").length === 0;
+
+    // If first message, inject the upload hint before the user message
+    if (isFirstUserMessage) {
+      setMessages((prev) => [...prev, UPLOAD_HINT_MESSAGE, userMsg]);
+    } else {
+      setMessages((prev) => [...prev, userMsg]);
+    }
     setIsLoading(true);
 
     try {
       // Build message history for the API (convert ai->assistant)
-      const apiMessages = [...messages, userMsg]
-        .filter((m) => m.id !== "1" && m.id !== "2") // skip initial static messages
+      const allMsgs = isFirstUserMessage
+        ? [...messages, UPLOAD_HINT_MESSAGE, userMsg]
+        : [...messages, userMsg];
+
+      const apiMessages = allMsgs
+        .filter((m) => m.id !== "1" && m.id !== "upload-hint") // skip static messages
         .map((m) => ({
           role: m.role === "ai" ? "assistant" : "user",
           content: m.content,
         }));
 
       // If this is the first user message, include initial context
-      if (apiMessages.filter((m) => m.role === "user").length === 1) {
+      if (isFirstUserMessage) {
         apiMessages.unshift(
           { role: "assistant", content: INITIAL_MESSAGES[0].content },
-          { role: "assistant", content: INITIAL_MESSAGES[1].content }
+          { role: "assistant", content: UPLOAD_HINT_MESSAGE.content }
         );
       }
 
