@@ -5,13 +5,16 @@ import { Input } from "@/components/ui/input";
 import { useGeminiChat } from "@/hooks/useGeminiChat";
 
 const profileFields = [
-  { key: "school", label: "学校 / 学历" },
+  { key: "targetDegree", label: "学历 / 目标学历" },
+  { key: "school", label: "就读学校" },
   { key: "major", label: "专业方向" },
   { key: "gpa", label: "GPA / 均分" },
-  { key: "lang", label: "语言成绩" },
-  { key: "gre", label: "GRE / GMAT" },
-  { key: "intern", label: "实习 / 科研" },
-  { key: "country", label: "目标国家 / 预算" },
+  { key: "languageScore", label: "语言成绩" },
+  { key: "greGmat", label: "GRE / GMAT" },
+  { key: "internship", label: "实习经历" },
+  { key: "research", label: "科研经历" },
+  { key: "targetCountry", label: "目标国家" },
+  { key: "budget", label: "留学预算" },
 ];
 
 export default function OnboardingChat() {
