@@ -39,14 +39,15 @@ const INITIAL_MESSAGES: ChatMessage[] = [
   {
     id: "1",
     role: "ai",
-    content: "你好！我是你的专属留学申请助手，很高兴能为你服务 😊 为了能更好地帮你规划申请，我们先从了解你的背景开始吧。\n\n请问你目前的学历情况是怎样的呢？（比如：本科在读、已毕业、硕士在读等）",
-  },
-  {
-    id: "2",
-    role: "ai",
-    content: "对了，你也可以随时把手头的材料上传给我——比如成绩单、简历、获奖证书等，支持 PDF 和图片格式，可以直接拖拽或点击附件按钮上传，我来帮你自动识别信息 📎",
+    content: "你好！我是你的专属留学申请助手，很高兴能为你服务 😊 为了更好的帮你规划，请你告诉我你想申请的阶段：本科/硕士/博士？",
   },
 ];
+
+const UPLOAD_HINT_MESSAGE: ChatMessage = {
+  id: "upload-hint",
+  role: "ai",
+  content: "对了，你也可以随时把手头的材料上传给我——比如成绩单、简历、获奖证书等，支持 PDF 和图片格式，可以直接拖拽或点击附件按钮上传，我来帮你自动识别信息 📎",
+};
 
 export function useGeminiChat() {
   const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
