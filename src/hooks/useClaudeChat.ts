@@ -39,7 +39,7 @@ export function useClaudeChat() {
           throw new Error("Not authenticated");
         }
 
-        const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/claude-chat`;
+        const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/deepseek-chat`;
         const response = await fetch(apiUrl, {
           method: "POST",
           headers: {
@@ -106,7 +106,7 @@ export function useClaudeChat() {
         })
       );
 
-      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/claude-chat`;
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/deepseek-chat`;
       const response = await fetch(apiUrl, {
         method: "POST",
         headers: {
