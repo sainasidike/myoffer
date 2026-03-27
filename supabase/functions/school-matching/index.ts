@@ -262,8 +262,8 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured");
 
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -399,28 +399,38 @@ ${profileSummary}
 
 只返回JSON数组，不要其他文字。`;
 
-      const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
-          messages: [
-            { role: "system", content: "你是留学数据专家，只返回准确的JSON数据，不添加任何额外文字或markdown标记。" },
-            { role: "user", content: aiPrompt },
-          ],
-          temperature: 0.3,
-          max_tokens: 8192,
-        }),
-      });
+      const aiResp = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [
+              {
+                role: "user",
+                parts: [{ text: "你是留学数据专家，只返回准确的JSON数据，不添加任何额外文字或markdown标记。" }]
+              },
+              {
+                role: "model",
+                parts: [{ text: "明白了，我只会返回JSON数据。" }]
+              },
+              {
+                role: "user",
+                parts: [{ text: aiPrompt }]
+              }
+            ],
+            generationConfig: {
+              temperature: 0.3,
+              maxOutputTokens: 8192,
+            },
+          }),
+        }
+      );
 
       if (aiResp.ok) {
         const aiData = await aiResp.json();
-        let content = aiData.choices?.[0]?.message?.content || "";
-        
-        // Clean markdown code blocks if present
+        let content = aiData.candidates?.[0]?.content?.parts?.[0]?.text || "";
+
         content = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
 
         try {

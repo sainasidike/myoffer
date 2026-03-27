@@ -10,8 +10,8 @@ Deno.serve(async (req) => {
 
   try {
     const { messages, profileData } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured");
 
     const filledFields = Object.entries(profileData || {})
       .filter(([_, v]) => v)
@@ -85,40 +85,54 @@ ${filledFields || "（暂无）"}
 ### 6. 完成度与总结
 - 信息采集达到 60% 或用户要求时，生成结构化档案摘要`;
 
-    const apiMessages = [
-      { role: "system", content: systemPrompt },
-      ...messages,
-    ];
+    const contents = messages.map((msg: any) => ({
+      role: msg.role === "assistant" ? "model" : "user",
+      parts: [{ text: msg.role === "system" ? msg.content : msg.content }]
+    }));
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: apiMessages,
-        stream: true,
-        temperature: 0.7,
-        max_tokens: 2048,
-      }),
-    });
+    if (messages[0]?.role !== "system") {
+      contents.unshift({
+        role: "user",
+        parts: [{ text: systemPrompt }]
+      });
+      contents.splice(1, 0, {
+        role: "model",
+        parts: [{ text: "明白了，我会按照这些准则来协助用户完成留学申请档案。" }]
+      });
+    } else {
+      contents[0] = {
+        role: "user",
+        parts: [{ text: systemPrompt }]
+      };
+      contents.splice(1, 0, {
+        role: "model",
+        parts: [{ text: "明白了，我会按照这些准则来协助用户完成留学申请档案。" }]
+      });
+    }
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:streamGenerateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents,
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 2048,
+          },
+        }),
+      }
+    );
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("AI Gateway error:", response.status, errorText);
+      console.error("Gemini API error:", response.status, errorText);
 
       if (response.status === 429) {
         return new Response(
           JSON.stringify({ error: "请求过于频繁，请稍后再试" }),
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "AI 额度已用尽，请充值后再试" }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
@@ -128,7 +142,44 @@ ${filledFields || "（暂无）"}
       );
     }
 
-    return new Response(response.body, {
+    const reader = response.body?.getReader();
+    if (!reader) throw new Error("No response body");
+
+    const encoder = new TextEncoder();
+    const decoder = new TextDecoder();
+
+    const stream = new ReadableStream({
+      async start(controller) {
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value, { stream: true });
+            const lines = chunk.split("\n").filter(line => line.trim());
+
+            for (const line of lines) {
+              try {
+                const json = JSON.parse(line);
+                const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (text) {
+                  const sseData = `data: ${JSON.stringify({
+                    choices: [{ delta: { content: text } }]
+                  })}\n\n`;
+                  controller.enqueue(encoder.encode(sseData));
+                }
+              } catch {}
+            }
+          }
+          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+          controller.close();
+        } catch (e) {
+          controller.error(e);
+        }
+      },
+    });
+
+    return new Response(stream, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
   } catch (e) {
