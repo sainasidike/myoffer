@@ -8,6 +8,7 @@ export interface ChatMessage {
 }
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/onboarding-chat`;
+const PARSE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parse-document`;
 
 const FIELD_TO_COLUMN: Record<string, string> = {
   targetDegree: "target_degree",
@@ -48,13 +49,14 @@ const UPLOAD_HINT_MESSAGE: ChatMessage = {
   content: "对了，你也可以随时把手头的材料上传给我——比如成绩单、简历、获奖证书等，支持 PDF 和图片格式，可以直接拖拽或点击附件按钮上传，我来帮你自动识别信息 📎",
 };
 
-type ChatState = "ask_stage" | "show_upload_hint" | "free_chat";
+type ChatState = "ask_stage" | "free_chat";
 
 export function useGeminiChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([WELCOME_MESSAGE]);
   const [isLoading, setIsLoading] = useState(false);
   const [chatState, setChatState] = useState<ChatState>("ask_stage");
   const profileDataRef = useRef<Record<string, string>>({});
+  const [profileVersion, setProfileVersion] = useState(0);
 
   const syncProfileToDb = useCallback(async (data: Record<string, string>) => {
     try {
@@ -80,6 +82,23 @@ export function useGeminiChat() {
       console.error("Profile sync error:", err);
     }
   }, []);
+
+  const extractProfileUpdates = useCallback((text: string) => {
+    const profileMatch = text.match(/<<<PROFILE_UPDATE:(.*?)>>>/g);
+    if (profileMatch) {
+      for (const match of profileMatch) {
+        try {
+          const json = match.replace("<<<PROFILE_UPDATE:", "").replace(">>>", "");
+          const data = JSON.parse(json);
+          profileDataRef.current = { ...profileDataRef.current, ...data };
+        } catch { /* ignore */ }
+      }
+      syncProfileToDb(profileDataRef.current);
+      setProfileVersion((v) => v + 1);
+      return text.replace(/<<<PROFILE_UPDATE:.*?>>>/g, "").trim();
+    }
+    return text;
+  }, [syncProfileToDb]);
 
   const callAI = useCallback(async (apiMessages: Array<{ role: string; content: string }>) => {
     const resp = await fetch(CHAT_URL, {
@@ -143,22 +162,13 @@ export function useGeminiChat() {
     }
 
     // Extract and clean profile updates
-    const profileMatch = fullText.match(/<<<PROFILE_UPDATE:(.*?)>>>/g);
-    if (profileMatch) {
-      for (const match of profileMatch) {
-        try {
-          const json = match.replace("<<<PROFILE_UPDATE:", "").replace(">>>", "");
-          const data = JSON.parse(json);
-          profileDataRef.current = { ...profileDataRef.current, ...data };
-        } catch { /* ignore */ }
-      }
-      syncProfileToDb(profileDataRef.current);
-      const cleanText = fullText.replace(/<<<PROFILE_UPDATE:.*?>>>/g, "").trim();
+    const cleanText = extractProfileUpdates(fullText);
+    if (cleanText !== fullText) {
       setMessages((prev) =>
         prev.map((m) => (m.id === aiMsgId ? { ...m, content: cleanText } : m))
       );
     }
-  }, [syncProfileToDb]);
+  }, [extractProfileUpdates]);
 
   const sendMessage = useCallback(async (text: string) => {
     if (!text.trim() || isLoading) return;
@@ -174,21 +184,19 @@ export function useGeminiChat() {
 
     try {
       if (chatState === "ask_stage") {
-        // State A → B: Detect stage keywords, save to profile, show upload hint (no AI call)
         const lowerText = text.toLowerCase();
         const matched = STAGE_KEYWORDS.some((kw) => lowerText.includes(kw));
 
         if (matched) {
-          // Extract the degree stage
           let degree = text.trim();
           if (lowerText.includes("博士") || lowerText.includes("phd")) degree = "博士";
           else if (lowerText.includes("硕士") || lowerText.includes("master") || lowerText.includes("研究生") || lowerText.includes("graduate")) degree = "硕士";
           else if (lowerText.includes("本科") || lowerText.includes("bachelor") || lowerText.includes("undergraduate")) degree = "本科";
 
           profileDataRef.current = { ...profileDataRef.current, targetDegree: degree };
+          setProfileVersion((v) => v + 1);
           syncProfileToDb(profileDataRef.current);
 
-          // Show upload hint after a brief delay
           setTimeout(() => {
             setMessages((prev) => [...prev, UPLOAD_HINT_MESSAGE]);
             setChatState("free_chat");
@@ -196,7 +204,6 @@ export function useGeminiChat() {
           }, 600);
           return;
         } else {
-          // User didn't mention a stage — gently re-ask (no AI call)
           setMessages((prev) => [
             ...prev,
             {
@@ -210,7 +217,7 @@ export function useGeminiChat() {
         }
       }
 
-      // State C: Free chat — call AI
+      // Free chat — call AI
       const staticIds = new Set(["welcome", "upload-hint"]);
       const apiMessages = messages
         .filter((m) => !staticIds.has(m.id))
@@ -220,7 +227,6 @@ export function useGeminiChat() {
           content: m.content,
         }));
 
-      // Prepend conversation context
       apiMessages.unshift(
         { role: "assistant", content: WELCOME_MESSAGE.content },
         { role: "assistant", content: UPLOAD_HINT_MESSAGE.content },
@@ -242,5 +248,92 @@ export function useGeminiChat() {
     }
   }, [isLoading, messages, chatState, callAI, syncProfileToDb]);
 
-  return { messages, isLoading, sendMessage, profileData: profileDataRef.current };
+  const sendFiles = useCallback(async (files: File[]) => {
+    if (isLoading || files.length === 0) return;
+
+    setIsLoading(true);
+    const fileNames = files.map((f) => f.name);
+
+    // Show user message
+    const userMsgId = Date.now().toString();
+    setMessages((prev) => [
+      ...prev,
+      { id: userMsgId, role: "user", content: `📎 上传了文件：${fileNames.join(", ")}` },
+    ]);
+
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userId = sessionData?.session?.user?.id;
+      if (!userId) throw new Error("请先登录");
+
+      // If still in ask_stage, auto-transition to free_chat
+      if (chatState === "ask_stage") {
+        setMessages((prev) => [...prev, UPLOAD_HINT_MESSAGE]);
+        setChatState("free_chat");
+      }
+
+      for (const file of files) {
+        const filePath = `${userId}/${Date.now()}_${file.name}`;
+
+        // Upload to storage
+        const { error: uploadError } = await supabase.storage
+          .from("onboarding-documents")
+          .upload(filePath, file);
+
+        if (uploadError) {
+          throw new Error(`文件上传失败：${uploadError.message}`);
+        }
+
+        // Show parsing indicator
+        const parsingMsgId = (Date.now() + 1).toString();
+        setMessages((prev) => [
+          ...prev,
+          { id: parsingMsgId, role: "ai", content: `正在解析 "${file.name}"，请稍候... 🔍` },
+        ]);
+
+        // Call parse edge function
+        const resp = await fetch(PARSE_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({
+            filePath,
+            fileName: file.name,
+            profileData: profileDataRef.current,
+          }),
+        });
+
+        if (!resp.ok) {
+          const errData = await resp.json().catch(() => ({ error: "解析失败" }));
+          throw new Error(errData.error || "解析失败");
+        }
+
+        const { content } = await resp.json();
+        const cleanContent = extractProfileUpdates(content);
+
+        // Replace parsing indicator with actual result
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === parsingMsgId ? { ...m, content: cleanContent } : m
+          )
+        );
+      }
+    } catch (err: any) {
+      console.error("File upload error:", err);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: (Date.now() + 2).toString(),
+          role: "ai",
+          content: `抱歉，文件处理出现问题：${err.message || "未知错误"}`,
+        },
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [isLoading, chatState, extractProfileUpdates, syncProfileToDb]);
+
+  return { messages, isLoading, sendMessage, sendFiles, profileData: profileDataRef.current, profileVersion };
 }

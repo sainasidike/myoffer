@@ -18,7 +18,7 @@ const profileFields = [
 ];
 
 export default function OnboardingChat() {
-  const { messages, isLoading, sendMessage, profileData } = useGeminiChat();
+  const { messages, isLoading, sendMessage, sendFiles, profileData, profileVersion } = useGeminiChat();
   const [input, setInput] = useState("");
   const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
   const chatEndRef = useRef<HTMLDivElement>(null);
