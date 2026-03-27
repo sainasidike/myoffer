@@ -35,6 +35,93 @@ export type Database = {
         }
         Relationships: []
       }
+      user_onboarding_profiles: {
+        Row: {
+          awards: string | null
+          budget: string | null
+          created_at: string
+          cross_major: string | null
+          current_education: string | null
+          entrepreneurship: string | null
+          gpa: string | null
+          gre_gmat: string | null
+          id: string
+          internship: string | null
+          language_score: string | null
+          language_type: string | null
+          major: string | null
+          other_activities: string | null
+          overseas: string | null
+          ranking_req: string | null
+          research: string | null
+          scholarship: string | null
+          school: string | null
+          special_needs: string | null
+          target_country: string | null
+          target_degree: string | null
+          target_year: string | null
+          updated_at: string
+          user_id: string
+          volunteer: string | null
+        }
+        Insert: {
+          awards?: string | null
+          budget?: string | null
+          created_at?: string
+          cross_major?: string | null
+          current_education?: string | null
+          entrepreneurship?: string | null
+          gpa?: string | null
+          gre_gmat?: string | null
+          id?: string
+          internship?: string | null
+          language_score?: string | null
+          language_type?: string | null
+          major?: string | null
+          other_activities?: string | null
+          overseas?: string | null
+          ranking_req?: string | null
+          research?: string | null
+          scholarship?: string | null
+          school?: string | null
+          special_needs?: string | null
+          target_country?: string | null
+          target_degree?: string | null
+          target_year?: string | null
+          updated_at?: string
+          user_id: string
+          volunteer?: string | null
+        }
+        Update: {
+          awards?: string | null
+          budget?: string | null
+          created_at?: string
+          cross_major?: string | null
+          current_education?: string | null
+          entrepreneurship?: string | null
+          gpa?: string | null
+          gre_gmat?: string | null
+          id?: string
+          internship?: string | null
+          language_score?: string | null
+          language_type?: string | null
+          major?: string | null
+          other_activities?: string | null
+          overseas?: string | null
+          ranking_req?: string | null
+          research?: string | null
+          scholarship?: string | null
+          school?: string | null
+          special_needs?: string | null
+          target_country?: string | null
+          target_degree?: string | null
+          target_year?: string | null
+          updated_at?: string
+          user_id?: string
+          volunteer?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
