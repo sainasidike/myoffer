@@ -105,16 +105,18 @@ export default function OnboardingChat() {
               </div>
             )}
 
-            {/* Inline file upload hint */}
-            <div
-              className="border-2 border-dashed border-primary/30 rounded-xl px-4 py-3 flex items-center gap-2 cursor-pointer hover:border-primary/50 transition-colors"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <FileText className="w-4 h-4 text-primary" />
-              <span className="text-sm text-primary">
-                支持拖入 PDF、图片、Word 文档，AI 自动解析
-              </span>
-            </div>
+            {/* Inline file upload hint - only shown when upload-hint message appears */}
+            {messages.some((m) => m.id === "upload-hint") && !messages.some((m) => m.role === "user" && messages.indexOf(m) > messages.findIndex((x) => x.id === "upload-hint")) && (
+              <div
+                className="border-2 border-dashed border-primary/30 rounded-xl px-4 py-3 flex items-center gap-2 cursor-pointer hover:border-primary/50 transition-colors"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <FileText className="w-4 h-4 text-primary" />
+                <span className="text-sm text-primary">
+                  支持拖入 PDF、图片、Word 文档，AI 自动解析
+                </span>
+              </div>
+            )}
 
             <div ref={chatEndRef} />
           </div>
