@@ -59,7 +59,7 @@ serve(async (req) => {
     const fileName = file.name;
 
     // Save file to storage
-    const filePath = `${user.id}/${Date.now()}_${fileName}`;
+    const filePath = `${userId}/${Date.now()}_${fileName}`;
     const { error: uploadError } = await supabase.storage
       .from("onboarding-documents")
       .upload(filePath, file);
