@@ -110,8 +110,10 @@ ${filledFields || "（暂无）"}
       });
     }
 
+    console.log("Using Gemini API key:", GEMINI_API_KEY ? `${GEMINI_API_KEY.slice(0, 10)}...` : "undefined");
+
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:streamGenerateContent?key=${GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?key=${GEMINI_API_KEY}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -128,6 +130,7 @@ ${filledFields || "（暂无）"}
     if (!response.ok) {
       const errorText = await response.text();
       console.error("Gemini API error:", response.status, errorText);
+      console.error("API URL:", `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent`);
 
       if (response.status === 429) {
         return new Response(
