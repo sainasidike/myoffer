@@ -13,6 +13,7 @@ serve(async (req) => {
   try {
     const { messages, profileData } = await req.json();
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    console.log("GEMINI_API_KEY exists:", !!GEMINI_API_KEY, "length:", GEMINI_API_KEY?.length);
     if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured");
 
     const filledFields = Object.entries(profileData || {})
@@ -90,7 +91,7 @@ ${filledFields || "（暂无）"}
       }
 
       return new Response(
-        JSON.stringify({ error: "AI 服务暂时不可用" }),
+        JSON.stringify({ error: `AI 服务暂时不可用 (Gemini ${response.status}: ${errorText.slice(0, 200)})` }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
