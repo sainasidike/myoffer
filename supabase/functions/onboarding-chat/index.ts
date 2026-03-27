@@ -91,7 +91,7 @@ ${filledFields || "（暂无）"}
       }
 
       return new Response(
-        JSON.stringify({ error: "AI 服务暂时不可用" }),
+        JSON.stringify({ error: `AI 服务暂时不可用 (Gemini ${response.status}: ${errorText.slice(0, 200)})` }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
