@@ -35,6 +35,87 @@ export type Database = {
         }
         Relationships: []
       }
+      school_programs: {
+        Row: {
+          accept_list: string | null
+          application_materials: string | null
+          avg_score: number | null
+          country: string
+          created_at: string
+          deadline: string | null
+          degree: string
+          duration: string | null
+          field: string
+          id: string
+          link: string | null
+          living_cost: string | null
+          notes: string | null
+          prestige: number | null
+          program: string
+          qs_ranking: number | null
+          require_gpa: string | null
+          require_lang: string | null
+          rolling_admission: boolean | null
+          scholarship: string | null
+          school: string
+          tuition: string | null
+          type: string | null
+          updated_at: string
+        }
+        Insert: {
+          accept_list?: string | null
+          application_materials?: string | null
+          avg_score?: number | null
+          country: string
+          created_at?: string
+          deadline?: string | null
+          degree: string
+          duration?: string | null
+          field: string
+          id?: string
+          link?: string | null
+          living_cost?: string | null
+          notes?: string | null
+          prestige?: number | null
+          program: string
+          qs_ranking?: number | null
+          require_gpa?: string | null
+          require_lang?: string | null
+          rolling_admission?: boolean | null
+          scholarship?: string | null
+          school: string
+          tuition?: string | null
+          type?: string | null
+          updated_at?: string
+        }
+        Update: {
+          accept_list?: string | null
+          application_materials?: string | null
+          avg_score?: number | null
+          country?: string
+          created_at?: string
+          deadline?: string | null
+          degree?: string
+          duration?: string | null
+          field?: string
+          id?: string
+          link?: string | null
+          living_cost?: string | null
+          notes?: string | null
+          prestige?: number | null
+          program?: string
+          qs_ranking?: number | null
+          require_gpa?: string | null
+          require_lang?: string | null
+          rolling_admission?: boolean | null
+          scholarship?: string | null
+          school?: string
+          tuition?: string | null
+          type?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_onboarding_profiles: {
         Row: {
           awards: string | null
