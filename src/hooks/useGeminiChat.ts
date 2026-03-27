@@ -13,7 +13,7 @@ const CLOUD_REST_URL = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1`;
 const CLOUD_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY || "");
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
 const FIELD_TO_COLUMN: Record<string, string> = {
   targetDegree: "target_degree",
