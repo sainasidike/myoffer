@@ -12,7 +12,7 @@ const PARSE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parse-docum
 
 // Use Lovable Cloud URL for direct DB operations (profile sync)
 const CLOUD_REST_URL = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1`;
-const CLOUD_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const CLOUD_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 const FIELD_TO_COLUMN: Record<string, string> = {
   targetDegree: "target_degree",
