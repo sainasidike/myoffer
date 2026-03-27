@@ -5,23 +5,27 @@ import { Input } from "@/components/ui/input";
 import { useGeminiChat } from "@/hooks/useGeminiChat";
 
 const profileFields = [
-  { key: "school", label: "学校 / 学历" },
+  { key: "targetDegree", label: "学历 / 目标学历" },
+  { key: "school", label: "就读学校" },
   { key: "major", label: "专业方向" },
   { key: "gpa", label: "GPA / 均分" },
-  { key: "lang", label: "语言成绩" },
-  { key: "gre", label: "GRE / GMAT" },
-  { key: "intern", label: "实习 / 科研" },
-  { key: "country", label: "目标国家 / 预算" },
+  { key: "languageScore", label: "语言成绩" },
+  { key: "greGmat", label: "GRE / GMAT" },
+  { key: "internship", label: "实习经历" },
+  { key: "research", label: "科研经历" },
+  { key: "targetCountry", label: "目标国家" },
+  { key: "budget", label: "留学预算" },
 ];
 
 export default function OnboardingChat() {
-  const { messages, isLoading, sendMessage } = useGeminiChat();
+  const { messages, isLoading, sendMessage, profileData } = useGeminiChat();
   const [input, setInput] = useState("");
   const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const completionPct = 0;
+  const filledCount = profileFields.filter((f) => profileData[f.key]).length;
+  const completionPct = Math.round((filledCount / profileFields.length) * 100);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -175,8 +179,8 @@ export default function OnboardingChat() {
             <div className="space-y-2.5 pt-1">
               {profileFields.map((f) => (
                 <div key={f.key} className="flex items-center gap-2.5 text-sm">
-                  <div className="w-2.5 h-2.5 rounded-full bg-muted-foreground/30" />
-                  <span className="text-muted-foreground">{f.label}</span>
+                  <div className={`w-2.5 h-2.5 rounded-full ${profileData[f.key] ? "bg-primary" : "bg-muted-foreground/30"}`} />
+                  <span className={profileData[f.key] ? "text-foreground" : "text-muted-foreground"}>{f.label}</span>
                 </div>
               ))}
             </div>

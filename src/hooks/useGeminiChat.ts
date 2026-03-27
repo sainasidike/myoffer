@@ -1,4 +1,5 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface ChatMessage {
   id: string;
@@ -8,16 +9,42 @@ export interface ChatMessage {
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/onboarding-chat`;
 
+// Map from camelCase profile keys to snake_case DB columns
+const FIELD_TO_COLUMN: Record<string, string> = {
+  targetDegree: "target_degree",
+  currentEducation: "current_education",
+  school: "school",
+  major: "major",
+  crossMajor: "cross_major",
+  gpa: "gpa",
+  languageType: "language_type",
+  languageScore: "language_score",
+  greGmat: "gre_gmat",
+  internship: "internship",
+  research: "research",
+  awards: "awards",
+  entrepreneurship: "entrepreneurship",
+  volunteer: "volunteer",
+  overseas: "overseas",
+  otherActivities: "other_activities",
+  targetCountry: "target_country",
+  budget: "budget",
+  targetYear: "target_year",
+  scholarship: "scholarship",
+  rankingReq: "ranking_req",
+  specialNeeds: "special_needs",
+};
+
 const INITIAL_MESSAGES: ChatMessage[] = [
   {
     id: "1",
     role: "ai",
-    content: "你好！我是你的留学申请顾问，很高兴认识你 😊 我会一步步帮你整理申请材料。先从基本情况开始——请问你想申请本科、硕士还是博士项目呢？",
+    content: "你好！我是你的专属留学申请助手，很高兴能为你服务 😊 为了能更好地帮你规划申请，我们先从了解你的背景开始吧。\n\n请问你目前的学历情况是怎样的呢？（比如：本科在读、已毕业、硕士在读等）",
   },
   {
     id: "2",
     role: "ai",
-    content: "在开始之前，你也可以先把手头的材料上传给我——比如成绩单、简历、获奖证书或其他任何文件，我来帮你自动识别信息 📎",
+    content: "对了，你也可以随时把手头的材料上传给我——比如成绩单、简历、获奖证书等，支持 PDF 和图片格式，可以直接拖拽或点击附件按钮上传，我来帮你自动识别信息 📎",
   },
 ];
 
@@ -25,6 +52,33 @@ export function useGeminiChat() {
   const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
   const [isLoading, setIsLoading] = useState(false);
   const profileDataRef = useRef<Record<string, string>>({});
+
+  // Persist profile data to database
+  const syncProfileToDb = useCallback(async (data: Record<string, string>) => {
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userId = sessionData?.session?.user?.id;
+      if (!userId) return;
+
+      // Convert camelCase keys to snake_case columns
+      const dbData: Record<string, string> = {};
+      for (const [key, value] of Object.entries(data)) {
+        const col = FIELD_TO_COLUMN[key];
+        if (col && value) dbData[col] = value;
+      }
+      if (Object.keys(dbData).length === 0) return;
+
+      const { error } = await supabase
+        .from("user_onboarding_profiles")
+        .upsert(
+          { user_id: userId, ...dbData, updated_at: new Date().toISOString() },
+          { onConflict: "user_id" }
+        );
+      if (error) console.error("Profile sync error:", error);
+    } catch (err) {
+      console.error("Profile sync error:", err);
+    }
+  }, []);
 
   const sendMessage = useCallback(async (text: string) => {
     if (!text.trim() || isLoading) return;
@@ -128,6 +182,8 @@ export function useGeminiChat() {
             profileDataRef.current = { ...profileDataRef.current, ...data };
           } catch { /* ignore parse errors */ }
         }
+        // Sync to database
+        syncProfileToDb(profileDataRef.current);
         // Remove profile update markers from displayed text
         const cleanText = fullText.replace(/<<<PROFILE_UPDATE:.*?>>>/g, "").trim();
         setMessages((prev) =>
@@ -147,7 +203,7 @@ export function useGeminiChat() {
     } finally {
       setIsLoading(false);
     }
-  }, [isLoading, messages]);
+  }, [isLoading, messages, syncProfileToDb]);
 
   return { messages, isLoading, sendMessage, profileData: profileDataRef.current };
 }
