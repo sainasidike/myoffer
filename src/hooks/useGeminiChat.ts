@@ -192,6 +192,11 @@ export function useGeminiChat() {
           prev.map((m) => (m.id === aiMsgId ? { ...m, content: cleanText } : m))
         );
       }
+
+      // After first AI response, append the upload hint message
+      if (isFirstUserMessage) {
+        setMessages((prev) => [...prev, UPLOAD_HINT_MESSAGE]);
+      }
     } catch (err: any) {
       console.error("Chat error:", err);
       setMessages((prev) => [
