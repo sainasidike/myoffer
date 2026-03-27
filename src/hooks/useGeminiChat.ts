@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from "react";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface ChatMessage {
@@ -7,12 +8,12 @@ export interface ChatMessage {
   content: string;
 }
 
-const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/onboarding-chat`;
 const PARSE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parse-document`;
-
-// Use Lovable Cloud URL for direct DB operations (profile sync)
 const CLOUD_REST_URL = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1`;
 const CLOUD_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY || "");
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
 
 const FIELD_TO_COLUMN: Record<string, string> = {
   targetDegree: "target_degree",
@@ -39,21 +40,17 @@ const FIELD_TO_COLUMN: Record<string, string> = {
   specialNeeds: "special_needs",
 };
 
-const STAGE_KEYWORDS = ["本科", "硕士", "博士", "master", "phd", "bachelor", "研究生", "undergraduate", "graduate"];
-
 const WELCOME_MESSAGE: ChatMessage = {
   id: "welcome",
   role: "ai",
-  content: "你好！我是你的专属留学申请助手，很高兴能为你服务 😊 为了更好的帮你规划，请你告诉我你想申请的阶段：本科/硕士/博士？",
+  content: "你好！我是你的专属留学申请助手，很高兴能为你服务。请先上传你的材料（成绩单、简历、获奖证书等），支持 PDF 和图片格式，我会自动识别信息并根据解析结果提问。",
 };
 
 const UPLOAD_HINT_MESSAGE: ChatMessage = {
   id: "upload-hint",
   role: "ai",
-  content: "对了，你也可以随时把手头的材料上传给我——比如成绩单、简历、获奖证书等，支持 PDF 和图片格式，可以直接拖拽或点击附件按钮上传，我来帮你自动识别信息 📎",
+  content: "上传材料后，我会根据解析结果向你提问缺失的信息，每次只问一个问题，已收集的字段不会重复询问。",
 };
-
-type ChatState = "ask_stage" | "free_chat";
 
 /** Get a valid access token — tries the Supabase client session first */
 async function getAccessToken(): Promise<string | null> {
@@ -77,7 +74,6 @@ async function getUserId(): Promise<string | null> {
 export function useGeminiChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([WELCOME_MESSAGE]);
   const [isLoading, setIsLoading] = useState(false);
-  const [chatState, setChatState] = useState<ChatState>("ask_stage");
   const profileDataRef = useRef<Record<string, string>>({});
   const [profileVersion, setProfileVersion] = useState(0);
 
@@ -131,68 +127,92 @@ export function useGeminiChat() {
   }, [syncProfileToDb]);
 
   const callAI = useCallback(async (apiMessages: Array<{ role: string; content: string }>) => {
-    const token = await getAccessToken();
-    if (!token) throw new Error("请先登录");
+    const filledFields = Object.entries(profileDataRef.current || {})
+      .filter(([_, v]) => v)
+      .map(([k, v]) => `${k}: ${v}`)
+      .join("\n");
 
-    const resp = await fetch(CHAT_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-        apikey: CLOUD_ANON_KEY,
+    const systemPrompt = `## 角色
+你是一个专业的留学申请助手（MyOffer AI 顾问），服务于中国学生的留学申请。
+
+## 重要：你已经完成了以下步骤，严禁重复
+1. 你已经提示过用户可以上传材料（成绩单、简历等），严禁再次提示。
+
+## 任务
+- 根据用户上传的材料和对话，收集以下申请信息
+- **每次只问一个问题**，不要一次问多个问题
+- 已收集的字段不要重复询问
+- 使用友好、专业的语气
+
+## 必收集字段（priority）
+- targetDegree: 申请阶段（本科/硕士/博士）
+- currentEducation: 当前学历
+- school: 学校
+- major: 专业
+- gpa: GPA
+- languageType: 语言考试类型（托福/雅思/等）
+- languageScore: 语言考试分数
+- targetCountry: 目标国家
+
+## 可选字段
+- crossMajor: 是否跨专业
+- greGmat: GRE/GMAT 分数
+- internship: 实习经历
+- research: 科研经历
+- awards: 获奖情况
+- entrepreneurship: 创业经历
+- volunteer: 志愿者经历
+- overseas: 海外交流经历
+- otherActivities: 其他活动
+- budget: 预算
+- targetYear: 目标入学年份
+- scholarship: 是否需要奖学金
+- rankingReq: 排名要求
+- specialNeeds: 特殊需求
+
+## 已收集字段
+${filledFields || "(暂无)"}
+
+## 交互规则
+1. **每次只问一个问题**
+2. 根据优先级顺序询问必收集字段
+3. 已收集的字段不要再问
+4. 当你识别到新的信息时，使用以下格式输出：<<<PROFILE_UPDATE:{"字段名":"值"}>>>
+5. 例如：<<<PROFILE_UPDATE:{"gpa":"3.8"}>>>
+6. 信息提取标记会被前端自动处理，不会显示给用户
+
+## 示例对话
+用户：我的 GPA 是 3.8
+你：好的，已记录您的 GPA 为 3.8。<<<PROFILE_UPDATE:{"gpa":"3.8"}>>>
+
+请问您考的是托福还是雅思？分数是多少？`;
+
+    const history = apiMessages.map((msg) => ({
+      role: msg.role === "assistant" ? "model" : "user",
+      parts: [{ text: msg.content }],
+    }));
+
+    const chat = model.startChat({
+      history,
+      generationConfig: {
+        maxOutputTokens: 1000,
+        temperature: 0.7,
       },
-      body: JSON.stringify({
-        messages: apiMessages,
-        profileData: profileDataRef.current,
-      }),
     });
 
-    if (!resp.ok || !resp.body) {
-      const errorData = await resp.json().catch(() => ({ error: "AI 服务暂时不可用" }));
-      throw new Error(errorData.error || `HTTP ${resp.status}`);
-    }
-
-    const reader = resp.body.getReader();
-    const decoder = new TextDecoder();
-    let textBuffer = "";
-    let fullText = "";
     const aiMsgId = (Date.now() + 1).toString();
-
     setMessages((prev) => [...prev, { id: aiMsgId, role: "ai", content: "" }]);
 
-    let streamDone = false;
-    while (!streamDone) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      textBuffer += decoder.decode(value, { stream: true });
+    let fullText = "";
+    const lastUserMessage = apiMessages[apiMessages.length - 1]?.content || "";
+    const result = await chat.sendMessageStream(systemPrompt + "\n\n用户消息：" + lastUserMessage);
 
-      let newlineIndex: number;
-      while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
-        let line = textBuffer.slice(0, newlineIndex);
-        textBuffer = textBuffer.slice(newlineIndex + 1);
-
-        if (line.endsWith("\r")) line = line.slice(0, -1);
-        if (line.startsWith(":") || line.trim() === "") continue;
-        if (!line.startsWith("data: ")) continue;
-
-        const jsonStr = line.slice(6).trim();
-        if (jsonStr === "[DONE]") { streamDone = true; break; }
-
-        try {
-          const parsed = JSON.parse(jsonStr);
-          const content = parsed.choices?.[0]?.delta?.content as string | undefined;
-          if (content) {
-            fullText += content;
-            const captured = fullText;
-            setMessages((prev) =>
-              prev.map((m) => (m.id === aiMsgId ? { ...m, content: captured } : m))
-            );
-          }
-        } catch {
-          textBuffer = line + "\n" + textBuffer;
-          break;
-        }
-      }
+    for await (const chunk of result.stream) {
+      const chunkText = chunk.text();
+      fullText += chunkText;
+      setMessages((prev) =>
+        prev.map((m) => (m.id === aiMsgId ? { ...m, content: fullText } : m))
+      );
     }
 
     const cleanText = extractProfileUpdates(fullText);
@@ -216,40 +236,6 @@ export function useGeminiChat() {
     setIsLoading(true);
 
     try {
-      if (chatState === "ask_stage") {
-        const lowerText = text.toLowerCase();
-        const matched = STAGE_KEYWORDS.some((kw) => lowerText.includes(kw));
-
-        if (matched) {
-          let degree = text.trim();
-          if (lowerText.includes("博士") || lowerText.includes("phd")) degree = "博士";
-          else if (lowerText.includes("硕士") || lowerText.includes("master") || lowerText.includes("研究生") || lowerText.includes("graduate")) degree = "硕士";
-          else if (lowerText.includes("本科") || lowerText.includes("bachelor") || lowerText.includes("undergraduate")) degree = "本科";
-
-          profileDataRef.current = { ...profileDataRef.current, targetDegree: degree };
-          setProfileVersion((v) => v + 1);
-          syncProfileToDb(profileDataRef.current);
-
-          setTimeout(() => {
-            setMessages((prev) => [...prev, UPLOAD_HINT_MESSAGE]);
-            setChatState("free_chat");
-            setIsLoading(false);
-          }, 600);
-          return;
-        } else {
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: (Date.now() + 1).toString(),
-              role: "ai",
-              content: "请告诉我你想申请的阶段哦～是本科、硕士还是博士呢？😊",
-            },
-          ]);
-          setIsLoading(false);
-          return;
-        }
-      }
-
       const staticIds = new Set(["welcome", "upload-hint"]);
       const apiMessages = messages
         .filter((m) => !staticIds.has(m.id))
@@ -258,11 +244,6 @@ export function useGeminiChat() {
           role: m.role === "ai" ? "assistant" : "user",
           content: m.content,
         }));
-
-      apiMessages.unshift(
-        { role: "assistant", content: WELCOME_MESSAGE.content },
-        { role: "assistant", content: UPLOAD_HINT_MESSAGE.content },
-      );
 
       await callAI(apiMessages);
     } catch (err: any) {
@@ -278,7 +259,7 @@ export function useGeminiChat() {
     } finally {
       setIsLoading(false);
     }
-  }, [isLoading, messages, chatState, callAI, syncProfileToDb]);
+  }, [isLoading, messages, callAI]);
 
   const sendFiles = useCallback(async (files: File[]) => {
     if (isLoading || files.length === 0) return;
@@ -296,19 +277,13 @@ export function useGeminiChat() {
       const token = await getAccessToken();
       if (!token) throw new Error("请先登录");
 
-      if (chatState === "ask_stage") {
-        setMessages((prev) => [...prev, UPLOAD_HINT_MESSAGE]);
-        setChatState("free_chat");
-      }
-
       for (const file of files) {
         const parsingMsgId = (Date.now() + 1).toString();
         setMessages((prev) => [
           ...prev,
-          { id: parsingMsgId, role: "ai", content: `正在解析 "${file.name}"，请稍候... 🔍` },
+          { id: parsingMsgId, role: "ai", content: `正在解析 "${file.name}"，请稍候...` },
         ]);
 
-        // Send file directly to edge function as FormData
         const formData = new FormData();
         formData.append("file", file);
         formData.append("profileData", JSON.stringify(profileDataRef.current));
@@ -358,7 +333,7 @@ export function useGeminiChat() {
     } finally {
       setIsLoading(false);
     }
-  }, [isLoading, chatState, extractProfileUpdates, syncProfileToDb]);
+  }, [isLoading, extractProfileUpdates]);
 
   return { messages, isLoading, sendMessage, sendFiles, profileData: profileDataRef.current, profileVersion };
 }
