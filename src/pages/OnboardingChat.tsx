@@ -226,7 +226,7 @@ export default function OnboardingChat() {
                   </span>
                   {profileData[f.key] && (
                     <span className="ml-auto text-xs text-primary font-mono truncate max-w-[80px]">
-                      {profileData[f.key]}
+                      {typeof profileData[f.key] === "object" ? JSON.stringify(profileData[f.key]) : profileData[f.key]}
                     </span>
                   )}
                 </div>
