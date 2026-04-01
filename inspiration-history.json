@@ -1,5 +1,306 @@
 {
-  "displayed_products": [],
-  "last_cleanup": "2026-01-01",
-  "total_products_tracked": 0
+  "displayed_products": [
+    {
+      "id": "rd_1s828dj",
+      "first_shown": "2026-04-01",
+      "score": 10
+    },
+    {
+      "id": "rd_1s8c2t7",
+      "first_shown": "2026-04-01",
+      "score": 7
+    },
+    {
+      "id": "rd_1s93wyl",
+      "first_shown": "2026-04-01",
+      "score": 7
+    },
+    {
+      "id": "rd_1s6wswn",
+      "first_shown": "2026-04-01",
+      "score": 7
+    },
+    {
+      "id": "rd_1s8wmu7",
+      "first_shown": "2026-04-01",
+      "score": 6
+    },
+    {
+      "id": "rd_1s9cc68",
+      "first_shown": "2026-04-01",
+      "score": 6
+    },
+    {
+      "id": "rd_1s9bhug",
+      "first_shown": "2026-04-01",
+      "score": 6
+    },
+    {
+      "id": "rd_1s8qisi",
+      "first_shown": "2026-04-01",
+      "score": 6
+    },
+    {
+      "id": "rd_1s94qaw",
+      "first_shown": "2026-04-01",
+      "score": 6
+    },
+    {
+      "id": "rd_1s8opu2",
+      "first_shown": "2026-04-01",
+      "score": 6
+    },
+    {
+      "id": "rd_1s95zl0",
+      "first_shown": "2026-04-01",
+      "score": 6
+    },
+    {
+      "id": "rd_1s8cmqj",
+      "first_shown": "2026-04-01",
+      "score": 6
+    },
+    {
+      "id": "rd_1s8jwx0",
+      "first_shown": "2026-04-01",
+      "score": 6
+    },
+    {
+      "id": "rd_1s8b6ti",
+      "first_shown": "2026-04-01",
+      "score": 6
+    },
+    {
+      "id": "rd_1s7m7rn",
+      "first_shown": "2026-04-01",
+      "score": 6
+    },
+    {
+      "id": "rd_1s8xnpq",
+      "first_shown": "2026-04-01",
+      "score": 6
+    },
+    {
+      "id": "rd_1s7tdze",
+      "first_shown": "2026-04-01",
+      "score": 6
+    },
+    {
+      "id": "rd_1s6uqns",
+      "first_shown": "2026-04-01",
+      "score": 6
+    },
+    {
+      "id": "rd_1s73gma",
+      "first_shown": "2026-04-01",
+      "score": 6
+    },
+    {
+      "id": "rd_1s634wk",
+      "first_shown": "2026-04-01",
+      "score": 6
+    },
+    {
+      "id": "rd_1s62taq",
+      "first_shown": "2026-04-01",
+      "score": 6
+    },
+    {
+      "id": "rd_1s54cvg",
+      "first_shown": "2026-04-01",
+      "score": 6
+    },
+    {
+      "id": "rd_1s4yyyi",
+      "first_shown": "2026-04-01",
+      "score": 6
+    },
+    {
+      "id": "rd_1s8rm2i",
+      "first_shown": "2026-04-01",
+      "score": 5
+    },
+    {
+      "id": "rd_1s8t9uv",
+      "first_shown": "2026-04-01",
+      "score": 5
+    },
+    {
+      "id": "rd_1s96ibr",
+      "first_shown": "2026-04-01",
+      "score": 5
+    },
+    {
+      "id": "rd_1s99orb",
+      "first_shown": "2026-04-01",
+      "score": 5
+    },
+    {
+      "id": "rd_1s95w1n",
+      "first_shown": "2026-04-01",
+      "score": 5
+    },
+    {
+      "id": "rd_1s97kvh",
+      "first_shown": "2026-04-01",
+      "score": 5
+    },
+    {
+      "id": "rd_1s905cc",
+      "first_shown": "2026-04-01",
+      "score": 5
+    },
+    {
+      "id": "rd_1s9684l",
+      "first_shown": "2026-04-01",
+      "score": 5
+    },
+    {
+      "id": "rd_1s964jh",
+      "first_shown": "2026-04-01",
+      "score": 5
+    },
+    {
+      "id": "rd_1s9awwy",
+      "first_shown": "2026-04-01",
+      "score": 5
+    },
+    {
+      "id": "rd_1s9ar0g",
+      "first_shown": "2026-04-01",
+      "score": 5
+    },
+    {
+      "id": "rd_1s92iu8",
+      "first_shown": "2026-04-01",
+      "score": 5
+    },
+    {
+      "id": "rd_1s9beim",
+      "first_shown": "2026-04-01",
+      "score": 5
+    },
+    {
+      "id": "rd_1s8u4jm",
+      "first_shown": "2026-04-01",
+      "score": 5
+    },
+    {
+      "id": "rd_1s98btf",
+      "first_shown": "2026-04-01",
+      "score": 5
+    },
+    {
+      "id": "rd_1s9b100",
+      "first_shown": "2026-04-01",
+      "score": 5
+    },
+    {
+      "id": "rd_1s8y5zs",
+      "first_shown": "2026-04-01",
+      "score": 5
+    },
+    {
+      "id": "rd_1s9bcwc",
+      "first_shown": "2026-04-01",
+      "score": 5
+    },
+    {
+      "id": "rd_1s8ge2h",
+      "first_shown": "2026-04-01",
+      "score": 5
+    },
+    {
+      "id": "rd_1s92mvu",
+      "first_shown": "2026-04-01",
+      "score": 5
+    },
+    {
+      "id": "rd_1s98x0b",
+      "first_shown": "2026-04-01",
+      "score": 5
+    },
+    {
+      "id": "rd_1s97rbm",
+      "first_shown": "2026-04-01",
+      "score": 5
+    },
+    {
+      "id": "rd_1s8l0x7",
+      "first_shown": "2026-04-01",
+      "score": 5
+    },
+    {
+      "id": "rd_1s96trg",
+      "first_shown": "2026-04-01",
+      "score": 5
+    },
+    {
+      "id": "rd_1s8ew65",
+      "first_shown": "2026-04-01",
+      "score": 5
+    },
+    {
+      "id": "rd_1s8hr7k",
+      "first_shown": "2026-04-01",
+      "score": 5
+    },
+    {
+      "id": "rd_1s9c9vu",
+      "first_shown": "2026-04-01",
+      "score": 5
+    },
+    {
+      "id": "rd_1s8luvc",
+      "first_shown": "2026-04-01",
+      "score": 5
+    },
+    {
+      "id": "rd_1s955un",
+      "first_shown": "2026-04-01",
+      "score": 5
+    },
+    {
+      "id": "rd_1s8fw9n",
+      "first_shown": "2026-04-01",
+      "score": 5
+    },
+    {
+      "id": "rd_1s8qux9",
+      "first_shown": "2026-04-01",
+      "score": 5
+    },
+    {
+      "id": "rd_1s8ir98",
+      "first_shown": "2026-04-01",
+      "score": 5
+    },
+    {
+      "id": "rd_1s8i6u4",
+      "first_shown": "2026-04-01",
+      "score": 5
+    },
+    {
+      "id": "rd_1s8ft8d",
+      "first_shown": "2026-04-01",
+      "score": 5
+    },
+    {
+      "id": "rd_1s888ix",
+      "first_shown": "2026-04-01",
+      "score": 5
+    },
+    {
+      "id": "rd_1s8j3ap",
+      "first_shown": "2026-04-01",
+      "score": 5
+    },
+    {
+      "id": "rd_1s89wx9",
+      "first_shown": "2026-04-01",
+      "score": 5
+    }
+  ],
+  "last_cleanup": "2026-04-01",
+  "total_products_tracked": 60
 }

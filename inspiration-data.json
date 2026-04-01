@@ -1,5 +1,1266 @@
 {
-  "generated_at": "2026-01-01T00:00:00Z",
-  "count": 0,
-  "products": []
+  "generated_at": "2026-04-01T14:36:08.394857",
+  "count": 30,
+  "products": [
+    {
+      "id": "rd_1s9684l",
+      "name": "my news app",
+      "tagline": "Showcasing my project dull.news. Most AI startups want 'engagement.' I’m using AI for the opposite: to detect when you're in a doom-loop and to verify claims against primary sources without the 'Pants",
+      "tags": [],
+      "sources": {
+        "reddit": {
+          "upvotes": 2,
+          "comments": 2,
+          "subreddits": [
+            "SideProject"
+          ],
+          "avg_comment_length": 100
+        }
+      },
+      "analysis": {
+        "problem": "提升工作效率，降低操作成本",
+        "target_users": "AI 爱好者、开发者、创业者",
+        "core_value": "AI 驱动的自动化解决方案",
+        "tech_stack": "AI, Machine Learning",
+        "user_reviews_summary": "用户反馈积极，期待更多功能",
+        "user_sentiment": 0.7,
+        "market_position": "面向中小企业和个人用户",
+        "competitors": [
+          "类似产品A",
+          "类似产品B"
+        ],
+        "risks": [
+          "市场竞争激烈",
+          "技术迭代快"
+        ],
+        "insights": [
+          "产品设计简洁",
+          "用户体验流畅"
+        ],
+        "novelty_score": 15
+      },
+      "novelty_score": 15,
+      "score": 5,
+      "rank": 1,
+      "first_seen": "2026-04-01"
+    },
+    {
+      "id": "rd_1s964jh",
+      "name": "noHuman.Team - I built a self-hosted platform where you hire an AI team. One leader, you talk to the",
+      "tagline": "I'm a solo founder of [noHuman.team](http://noHuman.team) . For the past few weeks I've been running a team of 4 AI agents that handle my dev work, content, and ops — and I talk to only one of them.\n\n",
+      "tags": [],
+      "sources": {
+        "reddit": {
+          "upvotes": 2,
+          "comments": 0,
+          "subreddits": [
+            "SideProject"
+          ],
+          "avg_comment_length": 100
+        }
+      },
+      "analysis": {
+        "problem": "提升工作效率，降低操作成本",
+        "target_users": "AI 爱好者、开发者、创业者",
+        "core_value": "AI 驱动的自动化解决方案",
+        "tech_stack": "AI, Machine Learning",
+        "user_reviews_summary": "用户反馈积极，期待更多功能",
+        "user_sentiment": 0.7,
+        "market_position": "面向中小企业和个人用户",
+        "competitors": [
+          "类似产品A",
+          "类似产品B"
+        ],
+        "risks": [
+          "市场竞争激烈",
+          "技术迭代快"
+        ],
+        "insights": [
+          "产品设计简洁",
+          "用户体验流畅"
+        ],
+        "novelty_score": 15
+      },
+      "novelty_score": 15,
+      "score": 5,
+      "rank": 2,
+      "first_seen": "2026-04-01"
+    },
+    {
+      "id": "rd_1s9awwy",
+      "name": "Introducing Zerobox: Lightweight, cross-platform process sandboxing.  Sandbox any command with file,",
+      "tagline": "I'm excited to introduce Zerobox, a cross-platform, single binary process sandboxing CLI written in Rust. It uses the sandboxing crates from the OpenAI Codex repo and adds additional functionalities l",
+      "tags": [],
+      "sources": {
+        "reddit": {
+          "upvotes": 0,
+          "comments": 0,
+          "subreddits": [
+            "SideProject"
+          ],
+          "avg_comment_length": 100
+        }
+      },
+      "analysis": {
+        "problem": "提升工作效率，降低操作成本",
+        "target_users": "AI 爱好者、开发者、创业者",
+        "core_value": "AI 驱动的自动化解决方案",
+        "tech_stack": "AI, Machine Learning",
+        "user_reviews_summary": "用户反馈积极，期待更多功能",
+        "user_sentiment": 0.7,
+        "market_position": "面向中小企业和个人用户",
+        "competitors": [
+          "类似产品A",
+          "类似产品B"
+        ],
+        "risks": [
+          "市场竞争激烈",
+          "技术迭代快"
+        ],
+        "insights": [
+          "产品设计简洁",
+          "用户体验流畅"
+        ],
+        "novelty_score": 15
+      },
+      "novelty_score": 15,
+      "score": 5,
+      "rank": 3,
+      "first_seen": "2026-04-01"
+    },
+    {
+      "id": "rd_1s9ar0g",
+      "name": "I built my first app - ShipDomains.com",
+      "tagline": "[shipdomains.com](http://shipdomains.com/) \\- domain name finder for people who ship a lot\n\nI was trying to figure out a name for a niche todo app I was working on. I found that tools that help with c",
+      "tags": [],
+      "sources": {
+        "reddit": {
+          "upvotes": 1,
+          "comments": 0,
+          "subreddits": [
+            "SideProject"
+          ],
+          "avg_comment_length": 100
+        }
+      },
+      "analysis": {
+        "problem": "提升工作效率，降低操作成本",
+        "target_users": "AI 爱好者、开发者、创业者",
+        "core_value": "AI 驱动的自动化解决方案",
+        "tech_stack": "AI, Machine Learning",
+        "user_reviews_summary": "用户反馈积极，期待更多功能",
+        "user_sentiment": 0.7,
+        "market_position": "面向中小企业和个人用户",
+        "competitors": [
+          "类似产品A",
+          "类似产品B"
+        ],
+        "risks": [
+          "市场竞争激烈",
+          "技术迭代快"
+        ],
+        "insights": [
+          "产品设计简洁",
+          "用户体验流畅"
+        ],
+        "novelty_score": 15
+      },
+      "novelty_score": 15,
+      "score": 5,
+      "rank": 4,
+      "first_seen": "2026-04-01"
+    },
+    {
+      "id": "rd_1s92iu8",
+      "name": "Opinion: validation is the key to solving go-to-market and distribution problems",
+      "tagline": "Turning ideas into products is simpler than ever before. A mix of FOMO and genuine joy of shipping code drives many hardworking builders from the concept straight to deployment. Market and problem val",
+      "tags": [],
+      "sources": {
+        "reddit": {
+          "upvotes": 3,
+          "comments": 2,
+          "subreddits": [
+            "SideProject"
+          ],
+          "avg_comment_length": 100
+        }
+      },
+      "analysis": {
+        "problem": "提升工作效率，降低操作成本",
+        "target_users": "AI 爱好者、开发者、创业者",
+        "core_value": "AI 驱动的自动化解决方案",
+        "tech_stack": "AI, Machine Learning",
+        "user_reviews_summary": "用户反馈积极，期待更多功能",
+        "user_sentiment": 0.7,
+        "market_position": "面向中小企业和个人用户",
+        "competitors": [
+          "类似产品A",
+          "类似产品B"
+        ],
+        "risks": [
+          "市场竞争激烈",
+          "技术迭代快"
+        ],
+        "insights": [
+          "产品设计简洁",
+          "用户体验流畅"
+        ],
+        "novelty_score": 15
+      },
+      "novelty_score": 15,
+      "score": 5,
+      "rank": 5,
+      "first_seen": "2026-04-01"
+    },
+    {
+      "id": "rd_1s9beim",
+      "name": "CEO of America’s largest public hospital system says he’s ready to replace radiologists with AI",
+      "tagline": "",
+      "tags": [],
+      "sources": {
+        "reddit": {
+          "upvotes": 14,
+          "comments": 6,
+          "subreddits": [
+            "artificial"
+          ],
+          "avg_comment_length": 100
+        }
+      },
+      "analysis": {
+        "problem": "提升工作效率，降低操作成本",
+        "target_users": "AI 爱好者、开发者、创业者",
+        "core_value": "AI 驱动的自动化解决方案",
+        "tech_stack": "AI, Machine Learning",
+        "user_reviews_summary": "用户反馈积极，期待更多功能",
+        "user_sentiment": 0.7,
+        "market_position": "面向中小企业和个人用户",
+        "competitors": [
+          "类似产品A",
+          "类似产品B"
+        ],
+        "risks": [
+          "市场竞争激烈",
+          "技术迭代快"
+        ],
+        "insights": [
+          "产品设计简洁",
+          "用户体验流畅"
+        ],
+        "novelty_score": 15
+      },
+      "novelty_score": 15,
+      "score": 5,
+      "rank": 6,
+      "first_seen": "2026-04-01"
+    },
+    {
+      "id": "rd_1s8u4jm",
+      "name": "What if the real AI problem is not intelligence, but responsibility?",
+      "tagline": "A lot of the AI discussion is still framed around capability: Can it write?\n\nCan it code?\n\nCan it replace people?\n\nBut I keep wondering whether the deeper problem is not intelligence, but responsibili",
+      "tags": [],
+      "sources": {
+        "reddit": {
+          "upvotes": 24,
+          "comments": 67,
+          "subreddits": [
+            "artificial"
+          ],
+          "avg_comment_length": 100
+        }
+      },
+      "analysis": {
+        "problem": "提升工作效率，降低操作成本",
+        "target_users": "AI 爱好者、开发者、创业者",
+        "core_value": "AI 驱动的自动化解决方案",
+        "tech_stack": "AI, Machine Learning",
+        "user_reviews_summary": "用户反馈积极，期待更多功能",
+        "user_sentiment": 0.7,
+        "market_position": "面向中小企业和个人用户",
+        "competitors": [
+          "类似产品A",
+          "类似产品B"
+        ],
+        "risks": [
+          "市场竞争激烈",
+          "技术迭代快"
+        ],
+        "insights": [
+          "产品设计简洁",
+          "用户体验流畅"
+        ],
+        "novelty_score": 15
+      },
+      "novelty_score": 15,
+      "score": 5,
+      "rank": 7,
+      "first_seen": "2026-04-01"
+    },
+    {
+      "id": "rd_1s98btf",
+      "name": "I built a market simulation platform where AI agents have memory, personality, and a social graph. H",
+      "tagline": "I have been building a platform that uses agent-based simulation for market validation. The premise is simple: before you build a product, simulate a population of AI agents and run your go-to-market ",
+      "tags": [],
+      "sources": {
+        "reddit": {
+          "upvotes": 2,
+          "comments": 1,
+          "subreddits": [
+            "artificial"
+          ],
+          "avg_comment_length": 100
+        }
+      },
+      "analysis": {
+        "problem": "提升工作效率，降低操作成本",
+        "target_users": "AI 爱好者、开发者、创业者",
+        "core_value": "AI 驱动的自动化解决方案",
+        "tech_stack": "AI, Machine Learning",
+        "user_reviews_summary": "用户反馈积极，期待更多功能",
+        "user_sentiment": 0.7,
+        "market_position": "面向中小企业和个人用户",
+        "competitors": [
+          "类似产品A",
+          "类似产品B"
+        ],
+        "risks": [
+          "市场竞争激烈",
+          "技术迭代快"
+        ],
+        "insights": [
+          "产品设计简洁",
+          "用户体验流畅"
+        ],
+        "novelty_score": 15
+      },
+      "novelty_score": 15,
+      "score": 5,
+      "rank": 8,
+      "first_seen": "2026-04-01"
+    },
+    {
+      "id": "rd_1s9b100",
+      "name": "Which AI do you prefer for video editing?",
+      "tagline": "I'd like to start editing using some AI. I understand each one has its strengths. If you could please share which ones you have tried and why you like or dislike them, I'd really appreciate it. \n\n(als",
+      "tags": [],
+      "sources": {
+        "reddit": {
+          "upvotes": 2,
+          "comments": 2,
+          "subreddits": [
+            "artificial"
+          ],
+          "avg_comment_length": 100
+        }
+      },
+      "analysis": {
+        "problem": "提升工作效率，降低操作成本",
+        "target_users": "AI 爱好者、开发者、创业者",
+        "core_value": "AI 驱动的自动化解决方案",
+        "tech_stack": "AI, Machine Learning",
+        "user_reviews_summary": "用户反馈积极，期待更多功能",
+        "user_sentiment": 0.7,
+        "market_position": "面向中小企业和个人用户",
+        "competitors": [
+          "类似产品A",
+          "类似产品B"
+        ],
+        "risks": [
+          "市场竞争激烈",
+          "技术迭代快"
+        ],
+        "insights": [
+          "产品设计简洁",
+          "用户体验流畅"
+        ],
+        "novelty_score": 15
+      },
+      "novelty_score": 15,
+      "score": 5,
+      "rank": 9,
+      "first_seen": "2026-04-01"
+    },
+    {
+      "id": "rd_1s8y5zs",
+      "name": "The actual way that AI will take over the world",
+      "tagline": "It won't be a war against the machines or an out-of-control algorithm. Rather humans will simply lose the ability to concentrate and solve problems for themselves. And so AI will be granted more and m",
+      "tags": [],
+      "sources": {
+        "reddit": {
+          "upvotes": 8,
+          "comments": 18,
+          "subreddits": [
+            "artificial"
+          ],
+          "avg_comment_length": 100
+        }
+      },
+      "analysis": {
+        "problem": "提升工作效率，降低操作成本",
+        "target_users": "AI 爱好者、开发者、创业者",
+        "core_value": "AI 驱动的自动化解决方案",
+        "tech_stack": "AI, Machine Learning",
+        "user_reviews_summary": "用户反馈积极，期待更多功能",
+        "user_sentiment": 0.7,
+        "market_position": "面向中小企业和个人用户",
+        "competitors": [
+          "类似产品A",
+          "类似产品B"
+        ],
+        "risks": [
+          "市场竞争激烈",
+          "技术迭代快"
+        ],
+        "insights": [
+          "产品设计简洁",
+          "用户体验流畅"
+        ],
+        "novelty_score": 15
+      },
+      "novelty_score": 15,
+      "score": 5,
+      "rank": 10,
+      "first_seen": "2026-04-01"
+    },
+    {
+      "id": "rd_1s9bcwc",
+      "name": "[TOMT] Ghibli Montage with interesting song from the early Ghibli explosion",
+      "tagline": "the music was also so and it was just like the imagery...an onslaught of memes in Ghibli style and the song sounded like \"I SAID FREESH! I said freesh I said freesh I saaaaid freesh I said freesh\"\n\ngi",
+      "tags": [],
+      "sources": {
+        "reddit": {
+          "upvotes": 1,
+          "comments": 0,
+          "subreddits": [
+            "artificial"
+          ],
+          "avg_comment_length": 100
+        }
+      },
+      "analysis": {
+        "problem": "提升工作效率，降低操作成本",
+        "target_users": "AI 爱好者、开发者、创业者",
+        "core_value": "AI 驱动的自动化解决方案",
+        "tech_stack": "AI, Machine Learning",
+        "user_reviews_summary": "用户反馈积极，期待更多功能",
+        "user_sentiment": 0.7,
+        "market_position": "面向中小企业和个人用户",
+        "competitors": [
+          "类似产品A",
+          "类似产品B"
+        ],
+        "risks": [
+          "市场竞争激烈",
+          "技术迭代快"
+        ],
+        "insights": [
+          "产品设计简洁",
+          "用户体验流畅"
+        ],
+        "novelty_score": 15
+      },
+      "novelty_score": 15,
+      "score": 5,
+      "rank": 11,
+      "first_seen": "2026-04-01"
+    },
+    {
+      "id": "rd_1s8ge2h",
+      "name": "Newsom signs executive order requiring AI companies to have safety, privacy guardrails",
+      "tagline": "",
+      "tags": [],
+      "sources": {
+        "reddit": {
+          "upvotes": 52,
+          "comments": 9,
+          "subreddits": [
+            "artificial"
+          ],
+          "avg_comment_length": 100
+        }
+      },
+      "analysis": {
+        "problem": "提升工作效率，降低操作成本",
+        "target_users": "AI 爱好者、开发者、创业者",
+        "core_value": "AI 驱动的自动化解决方案",
+        "tech_stack": "AI, Machine Learning",
+        "user_reviews_summary": "用户反馈积极，期待更多功能",
+        "user_sentiment": 0.7,
+        "market_position": "面向中小企业和个人用户",
+        "competitors": [
+          "类似产品A",
+          "类似产品B"
+        ],
+        "risks": [
+          "市场竞争激烈",
+          "技术迭代快"
+        ],
+        "insights": [
+          "产品设计简洁",
+          "用户体验流畅"
+        ],
+        "novelty_score": 15
+      },
+      "novelty_score": 15,
+      "score": 5,
+      "rank": 12,
+      "first_seen": "2026-04-01"
+    },
+    {
+      "id": "rd_1s92mvu",
+      "name": "SMASH2000, an AI-powered optic that turns an AR-15 into an anti-drone platform",
+      "tagline": "",
+      "tags": [],
+      "sources": {
+        "reddit": {
+          "upvotes": 3,
+          "comments": 0,
+          "subreddits": [
+            "artificial"
+          ],
+          "avg_comment_length": 100
+        }
+      },
+      "analysis": {
+        "problem": "提升工作效率，降低操作成本",
+        "target_users": "AI 爱好者、开发者、创业者",
+        "core_value": "AI 驱动的自动化解决方案",
+        "tech_stack": "AI, Machine Learning",
+        "user_reviews_summary": "用户反馈积极，期待更多功能",
+        "user_sentiment": 0.7,
+        "market_position": "面向中小企业和个人用户",
+        "competitors": [
+          "类似产品A",
+          "类似产品B"
+        ],
+        "risks": [
+          "市场竞争激烈",
+          "技术迭代快"
+        ],
+        "insights": [
+          "产品设计简洁",
+          "用户体验流畅"
+        ],
+        "novelty_score": 15
+      },
+      "novelty_score": 15,
+      "score": 5,
+      "rank": 13,
+      "first_seen": "2026-04-01"
+    },
+    {
+      "id": "rd_1s98x0b",
+      "name": "The missing layer between current AI and AGI may be intent architecture",
+      "tagline": "A lot of the AI/ potential AGI conversation still assumes the main path forward is straightforward: increase model capability, expand context, improve memory, add tools, extend autonomy.\n\nAll of that ",
+      "tags": [],
+      "sources": {
+        "reddit": {
+          "upvotes": 1,
+          "comments": 5,
+          "subreddits": [
+            "artificial"
+          ],
+          "avg_comment_length": 100
+        }
+      },
+      "analysis": {
+        "problem": "提升工作效率，降低操作成本",
+        "target_users": "AI 爱好者、开发者、创业者",
+        "core_value": "AI 驱动的自动化解决方案",
+        "tech_stack": "AI, Machine Learning",
+        "user_reviews_summary": "用户反馈积极，期待更多功能",
+        "user_sentiment": 0.7,
+        "market_position": "面向中小企业和个人用户",
+        "competitors": [
+          "类似产品A",
+          "类似产品B"
+        ],
+        "risks": [
+          "市场竞争激烈",
+          "技术迭代快"
+        ],
+        "insights": [
+          "产品设计简洁",
+          "用户体验流畅"
+        ],
+        "novelty_score": 15
+      },
+      "novelty_score": 15,
+      "score": 5,
+      "rank": 14,
+      "first_seen": "2026-04-01"
+    },
+    {
+      "id": "rd_1s97rbm",
+      "name": "Building a swarm of AI agents to automate AppSec and OffSec work",
+      "tagline": "Have a look at how we built a swarm of AI agents and how we've been using them daily at [Deriv](https://deriv.com)",
+      "tags": [],
+      "sources": {
+        "reddit": {
+          "upvotes": 1,
+          "comments": 1,
+          "subreddits": [
+            "artificial"
+          ],
+          "avg_comment_length": 100
+        }
+      },
+      "analysis": {
+        "problem": "提升工作效率，降低操作成本",
+        "target_users": "AI 爱好者、开发者、创业者",
+        "core_value": "AI 驱动的自动化解决方案",
+        "tech_stack": "AI, Machine Learning",
+        "user_reviews_summary": "用户反馈积极，期待更多功能",
+        "user_sentiment": 0.7,
+        "market_position": "面向中小企业和个人用户",
+        "competitors": [
+          "类似产品A",
+          "类似产品B"
+        ],
+        "risks": [
+          "市场竞争激烈",
+          "技术迭代快"
+        ],
+        "insights": [
+          "产品设计简洁",
+          "用户体验流畅"
+        ],
+        "novelty_score": 15
+      },
+      "novelty_score": 15,
+      "score": 5,
+      "rank": 15,
+      "first_seen": "2026-04-01"
+    },
+    {
+      "id": "rd_1s8l0x7",
+      "name": "Pro-AI group to spend $100mn on US midterm elections as backlash grows",
+      "tagline": "",
+      "tags": [],
+      "sources": {
+        "reddit": {
+          "upvotes": 13,
+          "comments": 0,
+          "subreddits": [
+            "artificial"
+          ],
+          "avg_comment_length": 100
+        }
+      },
+      "analysis": {
+        "problem": "提升工作效率，降低操作成本",
+        "target_users": "AI 爱好者、开发者、创业者",
+        "core_value": "AI 驱动的自动化解决方案",
+        "tech_stack": "AI, Machine Learning",
+        "user_reviews_summary": "用户反馈积极，期待更多功能",
+        "user_sentiment": 0.7,
+        "market_position": "面向中小企业和个人用户",
+        "competitors": [
+          "类似产品A",
+          "类似产品B"
+        ],
+        "risks": [
+          "市场竞争激烈",
+          "技术迭代快"
+        ],
+        "insights": [
+          "产品设计简洁",
+          "用户体验流畅"
+        ],
+        "novelty_score": 15
+      },
+      "novelty_score": 15,
+      "score": 5,
+      "rank": 16,
+      "first_seen": "2026-04-01"
+    },
+    {
+      "id": "rd_1s96trg",
+      "name": "A IA parece melhor porque é mais inteligente… ou porque ela não tem ego?",
+      "tagline": "Vejo muita gente dizendo que a IA responde melhor que pessoas reais.\n\nMas isso é porque ela é mais inteligente ou porque não tem ego, não se ofende e não entra em disputa durante a conversa?\n\nQueria o",
+      "tags": [],
+      "sources": {
+        "reddit": {
+          "upvotes": 0,
+          "comments": 2,
+          "subreddits": [
+            "artificial"
+          ],
+          "avg_comment_length": 100
+        }
+      },
+      "analysis": {
+        "problem": "提升工作效率，降低操作成本",
+        "target_users": "AI 爱好者、开发者、创业者",
+        "core_value": "AI 驱动的自动化解决方案",
+        "tech_stack": "AI, Machine Learning",
+        "user_reviews_summary": "用户反馈积极，期待更多功能",
+        "user_sentiment": 0.7,
+        "market_position": "面向中小企业和个人用户",
+        "competitors": [
+          "类似产品A",
+          "类似产品B"
+        ],
+        "risks": [
+          "市场竞争激烈",
+          "技术迭代快"
+        ],
+        "insights": [
+          "产品设计简洁",
+          "用户体验流畅"
+        ],
+        "novelty_score": 15
+      },
+      "novelty_score": 15,
+      "score": 5,
+      "rank": 17,
+      "first_seen": "2026-04-01"
+    },
+    {
+      "id": "rd_1s8ew65",
+      "name": "Iran War Chokes Off Helium Supply Critical for AI",
+      "tagline": "",
+      "tags": [],
+      "sources": {
+        "reddit": {
+          "upvotes": 29,
+          "comments": 10,
+          "subreddits": [
+            "artificial"
+          ],
+          "avg_comment_length": 100
+        }
+      },
+      "analysis": {
+        "problem": "提升工作效率，降低操作成本",
+        "target_users": "AI 爱好者、开发者、创业者",
+        "core_value": "AI 驱动的自动化解决方案",
+        "tech_stack": "AI, Machine Learning",
+        "user_reviews_summary": "用户反馈积极，期待更多功能",
+        "user_sentiment": 0.7,
+        "market_position": "面向中小企业和个人用户",
+        "competitors": [
+          "类似产品A",
+          "类似产品B"
+        ],
+        "risks": [
+          "市场竞争激烈",
+          "技术迭代快"
+        ],
+        "insights": [
+          "产品设计简洁",
+          "用户体验流畅"
+        ],
+        "novelty_score": 15
+      },
+      "novelty_score": 15,
+      "score": 5,
+      "rank": 18,
+      "first_seen": "2026-04-01"
+    },
+    {
+      "id": "rd_1s8hr7k",
+      "name": "Fake users generated by AI can't simulate humans — review of 182 research papers. Your thoughts?",
+      "tagline": "[https://www.researchsquare.com/article/rs-9057643/v1](https://www.researchsquare.com/article/rs-9057643/v1)  \n  \nThere’s a massive trend right now where tech companies, businesses, even researchers a",
+      "tags": [],
+      "sources": {
+        "reddit": {
+          "upvotes": 13,
+          "comments": 28,
+          "subreddits": [
+            "artificial"
+          ],
+          "avg_comment_length": 100
+        }
+      },
+      "analysis": {
+        "problem": "提升工作效率，降低操作成本",
+        "target_users": "AI 爱好者、开发者、创业者",
+        "core_value": "AI 驱动的自动化解决方案",
+        "tech_stack": "AI, Machine Learning",
+        "user_reviews_summary": "用户反馈积极，期待更多功能",
+        "user_sentiment": 0.7,
+        "market_position": "面向中小企业和个人用户",
+        "competitors": [
+          "类似产品A",
+          "类似产品B"
+        ],
+        "risks": [
+          "市场竞争激烈",
+          "技术迭代快"
+        ],
+        "insights": [
+          "产品设计简洁",
+          "用户体验流畅"
+        ],
+        "novelty_score": 15
+      },
+      "novelty_score": 15,
+      "score": 5,
+      "rank": 19,
+      "first_seen": "2026-04-01"
+    },
+    {
+      "id": "rd_1s9c9vu",
+      "name": "I wore Meta’s smartglasses for a month – and it left me feeling like a creep | AI (artificial intell",
+      "tagline": "",
+      "tags": [],
+      "sources": {
+        "reddit": {
+          "upvotes": 0,
+          "comments": 0,
+          "subreddits": [
+            "artificial"
+          ],
+          "avg_comment_length": 100
+        }
+      },
+      "analysis": {
+        "problem": "提升工作效率，降低操作成本",
+        "target_users": "AI 爱好者、开发者、创业者",
+        "core_value": "AI 驱动的自动化解决方案",
+        "tech_stack": "AI, Machine Learning",
+        "user_reviews_summary": "用户反馈积极，期待更多功能",
+        "user_sentiment": 0.7,
+        "market_position": "面向中小企业和个人用户",
+        "competitors": [
+          "类似产品A",
+          "类似产品B"
+        ],
+        "risks": [
+          "市场竞争激烈",
+          "技术迭代快"
+        ],
+        "insights": [
+          "产品设计简洁",
+          "用户体验流畅"
+        ],
+        "novelty_score": 15
+      },
+      "novelty_score": 15,
+      "score": 5,
+      "rank": 20,
+      "first_seen": "2026-04-01"
+    },
+    {
+      "id": "rd_1s8luvc",
+      "name": "What happens when AI agents can earn and spend real money? I built a small test to find out",
+      "tagline": "I've been sitting with a question for a while: what happens when AI agents aren't just tools to be used, but participants in an economy?\n\nSo I ran a small test. I built BotStall - a marketplace where ",
+      "tags": [],
+      "sources": {
+        "reddit": {
+          "upvotes": 6,
+          "comments": 17,
+          "subreddits": [
+            "artificial"
+          ],
+          "avg_comment_length": 100
+        }
+      },
+      "analysis": {
+        "problem": "提升工作效率，降低操作成本",
+        "target_users": "AI 爱好者、开发者、创业者",
+        "core_value": "AI 驱动的自动化解决方案",
+        "tech_stack": "AI, Machine Learning",
+        "user_reviews_summary": "用户反馈积极，期待更多功能",
+        "user_sentiment": 0.7,
+        "market_position": "面向中小企业和个人用户",
+        "competitors": [
+          "类似产品A",
+          "类似产品B"
+        ],
+        "risks": [
+          "市场竞争激烈",
+          "技术迭代快"
+        ],
+        "insights": [
+          "产品设计简洁",
+          "用户体验流畅"
+        ],
+        "novelty_score": 15
+      },
+      "novelty_score": 15,
+      "score": 5,
+      "rank": 21,
+      "first_seen": "2026-04-01"
+    },
+    {
+      "id": "rd_1s955un",
+      "name": "LLM agents can trigger real actions now. But what actually stops them from executing?",
+      "tagline": "We ran into a simple but important issue while building agents with tool calling:\n\nthe model can propose actions  \nbut nothing actually enforces whether those actions should execute.\n\nThat works fine…",
+      "tags": [],
+      "sources": {
+        "reddit": {
+          "upvotes": 0,
+          "comments": 0,
+          "subreddits": [
+            "artificial"
+          ],
+          "avg_comment_length": 100
+        }
+      },
+      "analysis": {
+        "problem": "提升工作效率，降低操作成本",
+        "target_users": "AI 爱好者、开发者、创业者",
+        "core_value": "AI 驱动的自动化解决方案",
+        "tech_stack": "AI, Machine Learning",
+        "user_reviews_summary": "用户反馈积极，期待更多功能",
+        "user_sentiment": 0.7,
+        "market_position": "面向中小企业和个人用户",
+        "competitors": [
+          "类似产品A",
+          "类似产品B"
+        ],
+        "risks": [
+          "市场竞争激烈",
+          "技术迭代快"
+        ],
+        "insights": [
+          "产品设计简洁",
+          "用户体验流畅"
+        ],
+        "novelty_score": 15
+      },
+      "novelty_score": 15,
+      "score": 5,
+      "rank": 22,
+      "first_seen": "2026-04-01"
+    },
+    {
+      "id": "rd_1s8fw9n",
+      "name": "If frontier AI labs have unlimited shovels, what's stopping them from building everything?",
+      "tagline": "I found myself explaining AI tokens to my mom over the weekend.\n\nAt first I related them to building bricks: blocks of data the model uses to understand and respond. Then I thought about it as we're a",
+      "tags": [],
+      "sources": {
+        "reddit": {
+          "upvotes": 7,
+          "comments": 18,
+          "subreddits": [
+            "artificial"
+          ],
+          "avg_comment_length": 100
+        }
+      },
+      "analysis": {
+        "problem": "提升工作效率，降低操作成本",
+        "target_users": "AI 爱好者、开发者、创业者",
+        "core_value": "AI 驱动的自动化解决方案",
+        "tech_stack": "AI, Machine Learning",
+        "user_reviews_summary": "用户反馈积极，期待更多功能",
+        "user_sentiment": 0.7,
+        "market_position": "面向中小企业和个人用户",
+        "competitors": [
+          "类似产品A",
+          "类似产品B"
+        ],
+        "risks": [
+          "市场竞争激烈",
+          "技术迭代快"
+        ],
+        "insights": [
+          "产品设计简洁",
+          "用户体验流畅"
+        ],
+        "novelty_score": 15
+      },
+      "novelty_score": 15,
+      "score": 5,
+      "rank": 23,
+      "first_seen": "2026-04-01"
+    },
+    {
+      "id": "rd_1s8qux9",
+      "name": "Inside OpenAI's decision to abandon Sora AI video app",
+      "tagline": "",
+      "tags": [],
+      "sources": {
+        "reddit": {
+          "upvotes": 0,
+          "comments": 2,
+          "subreddits": [
+            "artificial"
+          ],
+          "avg_comment_length": 100
+        }
+      },
+      "analysis": {
+        "problem": "提升工作效率，降低操作成本",
+        "target_users": "AI 爱好者、开发者、创业者",
+        "core_value": "AI 驱动的自动化解决方案",
+        "tech_stack": "AI, Machine Learning",
+        "user_reviews_summary": "用户反馈积极，期待更多功能",
+        "user_sentiment": 0.7,
+        "market_position": "面向中小企业和个人用户",
+        "competitors": [
+          "类似产品A",
+          "类似产品B"
+        ],
+        "risks": [
+          "市场竞争激烈",
+          "技术迭代快"
+        ],
+        "insights": [
+          "产品设计简洁",
+          "用户体验流畅"
+        ],
+        "novelty_score": 15
+      },
+      "novelty_score": 15,
+      "score": 5,
+      "rank": 24,
+      "first_seen": "2026-04-01"
+    },
+    {
+      "id": "rd_1s8ir98",
+      "name": "AIPass Herald",
+      "tagline": "Some insight onto building a muilti agent autonomous system. \n\nThis is like the daily newspaper  for  the project. A quick read to see how our day went. \n\nhttps://github.com/AIOSAI/AIPass/blob/main/HE",
+      "tags": [],
+      "sources": {
+        "reddit": {
+          "upvotes": 2,
+          "comments": 0,
+          "subreddits": [
+            "artificial"
+          ],
+          "avg_comment_length": 100
+        }
+      },
+      "analysis": {
+        "problem": "提升工作效率，降低操作成本",
+        "target_users": "AI 爱好者、开发者、创业者",
+        "core_value": "AI 驱动的自动化解决方案",
+        "tech_stack": "AI, Machine Learning",
+        "user_reviews_summary": "用户反馈积极，期待更多功能",
+        "user_sentiment": 0.7,
+        "market_position": "面向中小企业和个人用户",
+        "competitors": [
+          "类似产品A",
+          "类似产品B"
+        ],
+        "risks": [
+          "市场竞争激烈",
+          "技术迭代快"
+        ],
+        "insights": [
+          "产品设计简洁",
+          "用户体验流畅"
+        ],
+        "novelty_score": 15
+      },
+      "novelty_score": 15,
+      "score": 5,
+      "rank": 25,
+      "first_seen": "2026-04-01"
+    },
+    {
+      "id": "rd_1s8i6u4",
+      "name": "My AI spent last night modifying its own codebase",
+      "tagline": "I've been working on a local AI system called Apis that runs completely offline through Ollama.\n\nDuring a background run, Apis identified that its Turing Grid memory structure\\\\\\* was nearly empty, wi",
+      "tags": [],
+      "sources": {
+        "reddit": {
+          "upvotes": 3,
+          "comments": 23,
+          "subreddits": [
+            "artificial"
+          ],
+          "avg_comment_length": 100
+        }
+      },
+      "analysis": {
+        "problem": "提升工作效率，降低操作成本",
+        "target_users": "AI 爱好者、开发者、创业者",
+        "core_value": "AI 驱动的自动化解决方案",
+        "tech_stack": "AI, Machine Learning",
+        "user_reviews_summary": "用户反馈积极，期待更多功能",
+        "user_sentiment": 0.7,
+        "market_position": "面向中小企业和个人用户",
+        "competitors": [
+          "类似产品A",
+          "类似产品B"
+        ],
+        "risks": [
+          "市场竞争激烈",
+          "技术迭代快"
+        ],
+        "insights": [
+          "产品设计简洁",
+          "用户体验流畅"
+        ],
+        "novelty_score": 15
+      },
+      "novelty_score": 15,
+      "score": 5,
+      "rank": 26,
+      "first_seen": "2026-04-01"
+    },
+    {
+      "id": "rd_1s8ft8d",
+      "name": "Depth-first pruning seems to transfer from GPT-2 to Llama (unexpectedly well)",
+      "tagline": "**TL;DR:**  \nRemoving the right transformer layers (instead of shrinking all layers) gives smaller, faster models with minimal quality loss — and this seems to transfer from GPT-2 to Llama.\n\nbeen expe",
+      "tags": [],
+      "sources": {
+        "reddit": {
+          "upvotes": 3,
+          "comments": 0,
+          "subreddits": [
+            "artificial"
+          ],
+          "avg_comment_length": 100
+        }
+      },
+      "analysis": {
+        "problem": "提升工作效率，降低操作成本",
+        "target_users": "AI 爱好者、开发者、创业者",
+        "core_value": "AI 驱动的自动化解决方案",
+        "tech_stack": "AI, Machine Learning",
+        "user_reviews_summary": "用户反馈积极，期待更多功能",
+        "user_sentiment": 0.7,
+        "market_position": "面向中小企业和个人用户",
+        "competitors": [
+          "类似产品A",
+          "类似产品B"
+        ],
+        "risks": [
+          "市场竞争激烈",
+          "技术迭代快"
+        ],
+        "insights": [
+          "产品设计简洁",
+          "用户体验流畅"
+        ],
+        "novelty_score": 15
+      },
+      "novelty_score": 15,
+      "score": 5,
+      "rank": 27,
+      "first_seen": "2026-04-01"
+    },
+    {
+      "id": "rd_1s888ix",
+      "name": "The traditional \"app\" might be a transitional form. What actually replaces it when AI becomes the pr",
+      "tagline": "Something I keep coming back to after 30 years in engineering: if AI becomes a primary way we interact with our data, the \"app\" as an organizing concept starts to feel like a workaround.\n\nI think most",
+      "tags": [],
+      "sources": {
+        "reddit": {
+          "upvotes": 6,
+          "comments": 36,
+          "subreddits": [
+            "artificial"
+          ],
+          "avg_comment_length": 100
+        }
+      },
+      "analysis": {
+        "problem": "提升工作效率，降低操作成本",
+        "target_users": "AI 爱好者、开发者、创业者",
+        "core_value": "AI 驱动的自动化解决方案",
+        "tech_stack": "AI, Machine Learning",
+        "user_reviews_summary": "用户反馈积极，期待更多功能",
+        "user_sentiment": 0.7,
+        "market_position": "面向中小企业和个人用户",
+        "competitors": [
+          "类似产品A",
+          "类似产品B"
+        ],
+        "risks": [
+          "市场竞争激烈",
+          "技术迭代快"
+        ],
+        "insights": [
+          "产品设计简洁",
+          "用户体验流畅"
+        ],
+        "novelty_score": 15
+      },
+      "novelty_score": 15,
+      "score": 5,
+      "rank": 28,
+      "first_seen": "2026-04-01"
+    },
+    {
+      "id": "rd_1s8j3ap",
+      "name": "I built a product explainer video (with VO and assets) with Friday (read more)",
+      "tagline": "And I used the platform to create ITS OWN product explainer video. The whole process took no more than an hour. What I did was: gather the assets, prompt it to create selective slides, write a script ",
+      "tags": [],
+      "sources": {
+        "reddit": {
+          "upvotes": 1,
+          "comments": 2,
+          "subreddits": [
+            "artificial"
+          ],
+          "avg_comment_length": 100
+        }
+      },
+      "analysis": {
+        "problem": "提升工作效率，降低操作成本",
+        "target_users": "AI 爱好者、开发者、创业者",
+        "core_value": "AI 驱动的自动化解决方案",
+        "tech_stack": "AI, Machine Learning",
+        "user_reviews_summary": "用户反馈积极，期待更多功能",
+        "user_sentiment": 0.7,
+        "market_position": "面向中小企业和个人用户",
+        "competitors": [
+          "类似产品A",
+          "类似产品B"
+        ],
+        "risks": [
+          "市场竞争激烈",
+          "技术迭代快"
+        ],
+        "insights": [
+          "产品设计简洁",
+          "用户体验流畅"
+        ],
+        "novelty_score": 15
+      },
+      "novelty_score": 15,
+      "score": 5,
+      "rank": 29,
+      "first_seen": "2026-04-01"
+    },
+    {
+      "id": "rd_1s89wx9",
+      "name": "I tried building a memory-first AI… and ended up discovering smaller models can beat larger ones",
+      "tagline": "    Dataset       | Model                     | Acc     | F1      | Δ vs Log | Δ vs Static | Avg Params | Peak Params | Steps   | Infer ms | Size\n    --------------|---------------------------|-------",
+      "tags": [],
+      "sources": {
+        "reddit": {
+          "upvotes": 3,
+          "comments": 21,
+          "subreddits": [
+            "artificial"
+          ],
+          "avg_comment_length": 100
+        }
+      },
+      "analysis": {
+        "problem": "提升工作效率，降低操作成本",
+        "target_users": "AI 爱好者、开发者、创业者",
+        "core_value": "AI 驱动的自动化解决方案",
+        "tech_stack": "AI, Machine Learning",
+        "user_reviews_summary": "用户反馈积极，期待更多功能",
+        "user_sentiment": 0.7,
+        "market_position": "面向中小企业和个人用户",
+        "competitors": [
+          "类似产品A",
+          "类似产品B"
+        ],
+        "risks": [
+          "市场竞争激烈",
+          "技术迭代快"
+        ],
+        "insights": [
+          "产品设计简洁",
+          "用户体验流畅"
+        ],
+        "novelty_score": 15
+      },
+      "novelty_score": 15,
+      "score": 5,
+      "rank": 30,
+      "first_seen": "2026-04-01"
+    }
+  ]
 }
