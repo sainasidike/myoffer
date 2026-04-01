@@ -26,8 +26,7 @@ jobs:
       - name: Run update script
         env:
           PRODUCTHUNT_API_KEY: ${{ secrets.PRODUCTHUNT_API_KEY }}
-          TWITTER_API_KEY: ${{ secrets.TWITTER_API_KEY }}
-          REDDIT_CLIENT_ID: ${{ secrets.REDDIT_CLIENT_ID }}
+          # TWITTER_API_KEY: ${{ secrets.TWITTER_API_KEY }}  # Optional: Disabled to save $100/month
           CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
         run: python scripts/update_inspiration.py
 

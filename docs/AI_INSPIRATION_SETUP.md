@@ -18,17 +18,18 @@ AI 产品灵感库是一个多平台数据聚合系统，收集来自 Product Hu
 3. 获取 Developer Token
 4. 在 GitHub repo Settings > Secrets 添加 `PRODUCTHUNT_API_KEY`
 
-### 2. Twitter API v2
+### 2. Twitter API v2 ❌ **已禁用**
 
 **费用:** $100/月（Basic 层级）
 
-**步骤:**
+**状态:** 为节省成本，Twitter 数据源已被禁用。
+
+**如需启用:**
 1. 访问 https://developer.twitter.com/en/portal/dashboard
 2. 创建项目并申请 Basic 层级
 3. 获取 Bearer Token
 4. 在 GitHub repo Settings > Secrets 添加 `TWITTER_API_KEY`
-
-**注意:** Twitter API 有 API 调用限制。免费层级有严格的 rate limits，Basic 层级支持更多调用。
+5. 取消注释 `.github/workflows/update-inspiration.yml` 中的 `TWITTER_API_KEY` 行
 
 ### 3. Reddit API
 
@@ -63,7 +64,7 @@ pip install -r requirements.txt
 ```bash
 # .env
 PRODUCTHUNT_API_KEY=your_producthunt_key
-TWITTER_API_KEY=your_twitter_key
+# TWITTER_API_KEY=your_twitter_key  # 已禁用
 CLAUDE_API_KEY=your_claude_key
 ```
 
@@ -71,7 +72,7 @@ CLAUDE_API_KEY=your_claude_key
 
 ```bash
 export PRODUCTHUNT_API_KEY="your_key"
-export TWITTER_API_KEY="your_key"
+# export TWITTER_API_KEY="your_key"  # 已禁用
 export CLAUDE_API_KEY="your_key"
 ```
 
@@ -179,13 +180,13 @@ jobs:
 
 ## 成本预估
 
-| 服务 | 费用/月 | 说明 |
-|------|---------|------|
-| Product Hunt API | 免费 | 免费开发者 API |
-| Twitter API Basic | $100 | 基础层级需付费 |
-| Reddit API | 免费 | 使用公开 JSON endpoint |
-| Claude API | $5-10 | 按使用量计费，建议设置 rate limit |
-| **总计** | **$105-110** | 每月成本 |
+| 服务 | 费用/月 | 状态 | 说明 |
+|------|---------|------|------|
+| Product Hunt API | 免费 | ✅ 启用 | 免费开发者 API |
+| Twitter API Basic | ~~$100~~ | ❌ 已禁用 | 已跳过以节省成本 |
+| Reddit API | 免费 | ✅ 启用 | 使用公开 JSON endpoint |
+| Claude API | $5-10 | ✅ 启用 | 按使用量计费 |
+| **总计** | **$5-10/月** | | 节省了 $100/月！ |
 
 ## 故障排除
 
