@@ -1,43 +1,29 @@
-import { useState, useEffect } from "react";
+import { useState, useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { callEdgeFunction } from "@/lib/ai";
+import type { Tables, TablesInsert } from "@/integrations/supabase/types";
 
-export interface Essay {
-  id: string;
-  user_id: string;
-  title: string;
-  essay_type: string;
-  content: string;
-  word_count: number;
-  target_school: string | null;
-  target_program: string | null;
-  version: number;
-  is_final: boolean;
-  created_at: string;
-  updated_at: string;
-}
+type Essay = Tables<"essays">;
 
-export interface EssayChatMessage {
+export interface ChatMessage {
   id: string;
-  essay_id: string;
-  role: string;
+  role: "user" | "assistant";
   content: string;
-  created_at: string;
 }
 
 export function useEssays() {
-  const [essays, setEssays] = useState<Essay[]>([]);
-  const [currentEssay, setCurrentEssay] = useState<Essay | null>(null);
-  const [chatHistory, setChatHistory] = useState<EssayChatMessage[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [currentEssayId, setCurrentEssayId] = useState<string | null>(null);
 
-  const loadEssays = async () => {
-    try {
-      setIsLoading(true);
+  // Fetch all essays
+  const { data: essays, isLoading } = useQuery({
+    queryKey: ["essays"],
+    queryFn: async (): Promise<Essay[]> => {
       const { data: { user } } = await supabase.auth.getUser();
-
-      if (!user) {
-        throw new Error("用户未登录");
-      }
+      if (!user) return [];
 
       const { data, error } = await supabase
         .from("essays")
@@ -46,144 +32,218 @@ export function useEssays() {
         .order("updated_at", { ascending: false });
 
       if (error) throw error;
+      return data || [];
+    },
+  });
 
-      setEssays(data || []);
-    } catch (err: any) {
-      console.error("加载文书失败:", err);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const loadEssay = async (essayId: string) => {
-    try {
-      const { data: essayData, error: essayError } = await supabase
-        .from("essays")
-        .select("*")
-        .eq("id", essayId)
-        .maybeSingle();
-
-      if (essayError) throw essayError;
-
-      setCurrentEssay(essayData);
-
-      const { data: chatData, error: chatError } = await supabase
-        .from("essay_chat_history")
-        .select("*")
-        .eq("essay_id", essayId)
-        .order("created_at", { ascending: true });
-
-      if (chatError) throw chatError;
-
-      setChatHistory(chatData || []);
-    } catch (err: any) {
-      console.error("加载文书失败:", err);
-      throw err;
-    }
-  };
-
-  const createEssay = async (data: {
-    title: string;
-    essay_type: string;
-    target_school?: string;
-    target_program?: string;
-  }) => {
-    try {
+  // Create essay
+  const createEssay = useMutation({
+    mutationFn: async (input: {
+      application_id?: string;
+      essay_type: string;
+      title: string;
+    }) => {
       const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("未登录");
 
-      if (!user) {
-        throw new Error("用户未登录");
-      }
-
-      const { data: newEssay, error } = await supabase
+      const { data, error } = await supabase
         .from("essays")
         .insert({
           user_id: user.id,
-          title: data.title,
-          essay_type: data.essay_type,
-          content: "",
-          word_count: 0,
-          target_school: data.target_school || null,
-          target_program: data.target_program || null,
+          application_id: input.application_id,
+          essay_type: input.essay_type,
+          title: input.title,
+          status: "draft",
           version: 1,
-          is_final: false,
         })
         .select()
         .single();
 
       if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      setCurrentEssayId(data.id);
+      setChatMessages([]);
+      queryClient.invalidateQueries({ queryKey: ["essays"] });
+    },
+  });
 
-      await loadEssays();
-      return newEssay;
-    } catch (err: any) {
-      console.error("创建文书失败:", err);
-      throw err;
-    }
-  };
+  // Save essay content
+  const saveEssay = useMutation({
+    mutationFn: async ({
+      id,
+      content,
+      bumpVersion,
+    }: {
+      id: string;
+      content: string;
+      bumpVersion?: boolean;
+    }) => {
+      const updates: Record<string, unknown> = {
+        content,
+        updated_at: new Date().toISOString(),
+      };
 
-  const updateEssay = async (
-    essayId: string,
-    updates: {
-      content?: string;
-      word_count?: number;
-      title?: string;
-      is_final?: boolean;
-    }
-  ) => {
-    try {
+      if (bumpVersion) {
+        // Get current version
+        const { data: current } = await supabase
+          .from("essays")
+          .select("version")
+          .eq("id", id)
+          .single();
+        updates.version = (current?.version || 1) + 1;
+      }
+
       const { error } = await supabase
         .from("essays")
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", essayId);
+        .update(updates)
+        .eq("id", id);
 
       if (error) throw error;
 
-      if (currentEssay?.id === essayId) {
-        await loadEssay(essayId);
+      // Update linked material status
+      const { data: essay } = await supabase
+        .from("essays")
+        .select("application_id")
+        .eq("id", id)
+        .single();
+
+      if (essay?.application_id) {
+        await supabase
+          .from("application_materials")
+          .update({ status: "in_progress", updated_at: new Date().toISOString() })
+          .eq("essay_id", id);
       }
-      await loadEssays();
-    } catch (err: any) {
-      console.error("更新文书失败:", err);
-      throw err;
-    }
-  };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["essays"] });
+      queryClient.invalidateQueries({ queryKey: ["applications"] });
+    },
+  });
 
-  const addChatMessage = async (
-    essayId: string,
-    role: "user" | "assistant",
-    content: string
-  ) => {
-    try {
-      const { error } = await supabase.from("essay_chat_history").insert({
-        essay_id: essayId,
-        role,
-        content,
-      });
+  // Load conversation history for an essay
+  const loadConversation = useCallback(async (essayId: string) => {
+    setCurrentEssayId(essayId);
+    const { data } = await supabase
+      .from("essay_conversations")
+      .select("*")
+      .eq("essay_id", essayId)
+      .order("created_at", { ascending: true });
 
-      if (error) throw error;
-    } catch (err: any) {
-      console.error("添加对话失败:", err);
-      throw err;
-    }
-  };
-
-  useEffect(() => {
-    loadEssays();
+    setChatMessages(
+      (data || []).map((m) => ({
+        id: m.id,
+        role: m.role as "user" | "assistant",
+        content: m.content,
+      }))
+    );
   }, []);
 
+  // Send message to AI
+  const sendMessage = useCallback(
+    async (
+      userText: string,
+      essayId: string,
+      applicationId?: string,
+      essayType?: string,
+      currentContent?: string
+    ) => {
+      if (isStreaming) return;
+
+      const userMsg: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: "user",
+        content: userText,
+      };
+
+      const aiMsg: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        content: "",
+      };
+
+      setChatMessages((prev) => [...prev, userMsg, aiMsg]);
+      setIsStreaming(true);
+
+      // Save user message to DB
+      await supabase.from("essay_conversations").insert({
+        essay_id: essayId,
+        role: "user",
+        content: userText,
+      });
+
+      const apiMessages = [...chatMessages, userMsg].map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
+
+      await callEdgeFunction(
+        "essay-generation",
+        {
+          essay_id: essayId,
+          application_id: applicationId,
+          messages: apiMessages,
+          essay_type: essayType,
+          current_content: currentContent,
+        },
+        {
+          onToken: (token) => {
+            setChatMessages((prev) => {
+              const updated = [...prev];
+              const last = updated[updated.length - 1];
+              if (last.role === "assistant") {
+                last.content += token;
+              }
+              return updated;
+            });
+          },
+          onDone: async (fullText) => {
+            setChatMessages((prev) => {
+              const updated = [...prev];
+              const last = updated[updated.length - 1];
+              if (last.role === "assistant") {
+                last.content = fullText;
+              }
+              return updated;
+            });
+
+            // Save AI response to DB
+            await supabase.from("essay_conversations").insert({
+              essay_id: essayId,
+              role: "assistant",
+              content: fullText,
+            });
+
+            setIsStreaming(false);
+          },
+          onError: (error) => {
+            setChatMessages((prev) => {
+              const updated = [...prev];
+              const last = updated[updated.length - 1];
+              if (last.role === "assistant") {
+                last.content = `抱歉，出现了错误：${error}`;
+              }
+              return updated;
+            });
+            setIsStreaming(false);
+          },
+        }
+      );
+    },
+    [isStreaming, chatMessages]
+  );
+
   return {
-    essays,
-    currentEssay,
-    chatHistory,
+    essays: essays || [],
     isLoading,
-    createEssay,
-    updateEssay,
-    loadEssay,
-    addChatMessage,
-    refreshEssays: loadEssays,
+    createEssay: createEssay.mutateAsync,
+    saveEssay: saveEssay.mutate,
+    isSaving: saveEssay.isPending,
+    chatMessages,
+    isStreaming,
+    currentEssayId,
+    loadConversation,
+    sendMessage,
   };
 }

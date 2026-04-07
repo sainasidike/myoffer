@@ -6,162 +6,251 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CalendarDays, FileText, Download } from "lucide-react";
+import {
+  CalendarDays,
+  FileText,
+  Download,
+  Trash2,
+  Loader2,
+  FolderOpen,
+} from "lucide-react";
+import { useApplications } from "@/hooks/useApplications";
+import { useToast } from "@/hooks/use-toast";
 
-type AppStatus = "进行中" | "已提交" | "已录取" | "已拒绝";
-
-interface Application {
-  id: string;
-  school: string;
-  program: string;
-  status: AppStatus;
-  deadline: string;
-  materials: { name: string; done: boolean; docType?: string }[];
-}
-
-const statusColors: Record<AppStatus, string> = {
-  进行中: "bg-primary/10 text-primary",
-  已提交: "bg-warning/10 text-warning",
-  已录取: "bg-success/10 text-success",
-  已拒绝: "bg-destructive/10 text-destructive",
+const statusMap: Record<string, { label: string; color: string }> = {
+  in_progress: { label: "进行中", color: "bg-primary/10 text-primary" },
+  submitted: { label: "已提交", color: "bg-orange-500/10 text-orange-500" },
+  accepted: { label: "已录取", color: "bg-green-500/10 text-green-500" },
+  rejected: { label: "已拒绝", color: "bg-destructive/10 text-destructive" },
 };
 
-const mockApps: Application[] = [
-  {
-    id: "1", school: "UCL", program: "MSc Data Science", status: "进行中",
-    deadline: "2025-03-01",
-    materials: [
-      { name: "成绩单", done: true },
-      { name: "PS动机信", done: false, docType: "PS" },
-      { name: "CV简历", done: false, docType: "CV" },
-      { name: "推荐信 x2", done: false, docType: "推荐信" },
-    ],
-  },
-  {
-    id: "2", school: "香港大学", program: "MSc Computer Science", status: "进行中",
-    deadline: "2025-01-31",
-    materials: [
-      { name: "成绩单", done: true },
-      { name: "PS动机信", done: true, docType: "PS" },
-      { name: "推荐信 x2", done: false, docType: "推荐信" },
-    ],
-  },
-  {
-    id: "3", school: "爱丁堡大学", program: "MSc Data Science", status: "已提交",
-    deadline: "2025-04-01",
-    materials: [
-      { name: "成绩单", done: true },
-      { name: "PS动机信", done: true, docType: "PS" },
-      { name: "推荐信 x2", done: true, docType: "推荐信" },
-    ],
-  },
-  {
-    id: "4", school: "曼彻斯特大学", program: "MSc Data Science", status: "已录取",
-    deadline: "2025-06-30",
-    materials: [
-      { name: "成绩单", done: true },
-      { name: "PS动机信", done: true, docType: "PS" },
-      { name: "推荐信 x2", done: true, docType: "推荐信" },
-    ],
-  },
-];
+const materialStatusMap: Record<string, string> = {
+  pending: "待完成",
+  in_progress: "进行中",
+  submitted: "已提交",
+};
 
 export default function ApplicationTracker() {
-  const [filter, setFilter] = useState("全部");
+  const [filter, setFilter] = useState("all");
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const {
+    applications,
+    isLoading,
+    updateApplication,
+    updateMaterial,
+    deleteApplication,
+    stats,
+  } = useApplications();
 
   const filtered =
-    filter === "全部"
-      ? mockApps
-      : mockApps.filter((a) => a.status === filter);
+    filter === "all"
+      ? applications
+      : applications.filter((a) => a.status === filter);
 
-  const isUrgent = (deadline: string) => {
+  const isUrgent = (deadline: string | null) => {
+    if (!deadline) return false;
     const diff = new Date(deadline).getTime() - Date.now();
     return diff > 0 && diff < 7 * 24 * 60 * 60 * 1000;
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 space-y-6 max-w-5xl mx-auto">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">申请管家</h1>
-        <Button variant="outline" size="sm">
-          <Download className="w-4 h-4 mr-2" />
-          导出全部
-        </Button>
+        <div>
+          <h1 className="text-xl font-bold">申请管家</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            共 {stats.total} 个申请 · 进行中 {stats.inProgress} · 已提交{" "}
+            {stats.submitted} · 已录取 {stats.accepted}
+          </p>
+        </div>
       </div>
 
       <Tabs value={filter} onValueChange={setFilter}>
         <TabsList>
-          <TabsTrigger value="全部">全部</TabsTrigger>
-          <TabsTrigger value="进行中">进行中</TabsTrigger>
-          <TabsTrigger value="已提交">已提交</TabsTrigger>
-          <TabsTrigger value="已录取">已录取</TabsTrigger>
+          <TabsTrigger value="all">全部 ({stats.total})</TabsTrigger>
+          <TabsTrigger value="in_progress">
+            进行中 ({stats.inProgress})
+          </TabsTrigger>
+          <TabsTrigger value="submitted">已提交 ({stats.submitted})</TabsTrigger>
+          <TabsTrigger value="accepted">已录取 ({stats.accepted})</TabsTrigger>
         </TabsList>
       </Tabs>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {filtered.map((app) => {
-          const doneCt = app.materials.filter((m) => m.done).length;
-          const totalCt = app.materials.length;
-          const pct = Math.round((doneCt / totalCt) * 100);
+      {filtered.length === 0 ? (
+        <Card>
+          <CardContent className="p-12 text-center">
+            <FolderOpen className="w-12 h-12 mx-auto text-muted-foreground/30 mb-4" />
+            <h3 className="text-lg font-semibold mb-2">暂无申请</h3>
+            <p className="text-sm text-muted-foreground mb-6">
+              前往选校页面，将心仪的项目加入申请列表
+            </p>
+            <Button onClick={() => navigate("/schools")}>去选校</Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {filtered.map((app) => {
+            const doneCt = app.materials.filter(
+              (m) => m.status === "submitted"
+            ).length;
+            const totalCt = app.materials.length;
+            const pct = totalCt > 0 ? Math.round((doneCt / totalCt) * 100) : 0;
+            const statusInfo = statusMap[app.status || "in_progress"];
+            const prog = app.programs;
 
-          return (
-            <Card key={app.id} className="hover:shadow-md transition-shadow">
-              <CardContent className="p-5 space-y-4">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="font-semibold">{app.school}</h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">{app.program}</p>
+            return (
+              <Card key={app.id} className="hover:shadow-md transition-shadow">
+                <CardContent className="p-5 space-y-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold truncate">
+                        {prog?.university_name_cn || prog?.university_name || "未知学校"}
+                      </h3>
+                      <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                        {prog?.program_name_cn || prog?.program_name || ""}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 ml-2">
+                      <Badge
+                        className={`${statusInfo.color} border-0 text-xs shrink-0`}
+                      >
+                        {statusInfo.label}
+                      </Badge>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                        onClick={() => {
+                          deleteApplication(app.id);
+                          toast({ title: "已删除申请" });
+                        }}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
                   </div>
-                  <Badge className={`${statusColors[app.status]} border-0 text-xs`}>
-                    {app.status}
-                  </Badge>
-                </div>
 
-                <div className="flex items-center gap-2 text-xs">
-                  <CalendarDays className="w-3.5 h-3.5 text-muted-foreground" />
-                  <span className={isUrgent(app.deadline) ? "text-destructive font-medium" : "text-muted-foreground"}>
-                    截止：{app.deadline}
-                    {isUrgent(app.deadline) && " ⚠️ 即将截止"}
-                  </span>
-                </div>
+                  {app.deadline && (
+                    <div className="flex items-center gap-2 text-xs">
+                      <CalendarDays className="w-3.5 h-3.5 text-muted-foreground" />
+                      <span
+                        className={
+                          isUrgent(app.deadline)
+                            ? "text-destructive font-medium"
+                            : "text-muted-foreground"
+                        }
+                      >
+                        截止：{app.deadline}
+                        {isUrgent(app.deadline) && " ⚠️ 即将截止"}
+                      </span>
+                    </div>
+                  )}
 
-                <div className="space-y-2">
-                  {app.materials.map((mat, i) => (
-                    <div key={i} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Checkbox checked={mat.done} disabled />
-                        <span className={`text-sm ${mat.done ? "text-muted-foreground line-through" : "text-foreground"}`}>
-                          {mat.name}
+                  {/* Materials checklist */}
+                  <div className="space-y-2">
+                    {app.materials.map((mat) => {
+                      const isDone = mat.status === "submitted";
+                      const isEssayType = ["sop", "ps", "cv", "recommendation"].includes(
+                        mat.material_type
+                      );
+
+                      return (
+                        <div
+                          key={mat.id}
+                          className="flex items-center justify-between"
+                        >
+                          <div className="flex items-center gap-2">
+                            <Checkbox
+                              checked={isDone}
+                              onCheckedChange={(checked) => {
+                                updateMaterial({
+                                  id: mat.id,
+                                  updates: {
+                                    status: checked ? "submitted" : "pending",
+                                  },
+                                });
+                              }}
+                            />
+                            <span
+                              className={`text-sm ${
+                                isDone
+                                  ? "text-muted-foreground line-through"
+                                  : "text-foreground"
+                              }`}
+                            >
+                              {mat.material_name}
+                            </span>
+                            {mat.status === "in_progress" && (
+                              <Badge
+                                variant="secondary"
+                                className="text-xs h-5"
+                              >
+                                撰写中
+                              </Badge>
+                            )}
+                          </div>
+                          {!isDone && isEssayType && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-xs text-primary h-7"
+                              onClick={() =>
+                                navigate(
+                                  `/essays?app=${app.id}&type=${mat.material_type}`
+                                )
+                              }
+                            >
+                              <FileText className="w-3 h-3 mr-1" />
+                              {mat.status === "in_progress" ? "去修改" : "去撰写"}
+                            </Button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {totalCt > 0 && (
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>材料进度</span>
+                        <span>
+                          {doneCt}/{totalCt}
                         </span>
                       </div>
-                      {!mat.done && mat.docType && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-xs text-primary h-7"
-                          onClick={() => navigate("/essays")}
-                        >
-                          <FileText className="w-3 h-3 mr-1" />
-                          去撰写
-                        </Button>
-                      )}
+                      <Progress value={pct} className="h-1.5" />
                     </div>
-                  ))}
-                </div>
+                  )}
 
-                <div className="space-y-1">
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>材料进度</span>
-                    <span>{doneCt}/{totalCt}</span>
-                  </div>
-                  <Progress value={pct} className="h-1.5" />
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+                  {/* Status update buttons */}
+                  {app.status === "in_progress" && pct === 100 && (
+                    <Button
+                      size="sm"
+                      className="w-full text-xs"
+                      onClick={() =>
+                        updateApplication({
+                          id: app.id,
+                          updates: { status: "submitted" },
+                        })
+                      }
+                    >
+                      标记为已提交
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

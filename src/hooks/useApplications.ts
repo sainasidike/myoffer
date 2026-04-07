@@ -1,110 +1,126 @@
-import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 
-export interface ApplicationMaterial {
-  id: string;
-  application_id: string;
-  material_name: string;
-  material_type: string | null;
-  is_completed: boolean;
-  completed_at: string | null;
-  file_url: string | null;
-  notes: string | null;
-  created_at: string;
-  updated_at: string;
-}
+type Application = Tables<"applications">;
+type ApplicationMaterial = Tables<"application_materials">;
 
-export interface Application {
-  id: string;
-  user_id: string;
-  school: string;
-  program: string;
-  country: string | null;
-  status: string;
-  deadline: string | null;
-  submission_date: string | null;
-  decision_date: string | null;
-  notes: string | null;
-  created_at: string;
-  updated_at: string;
+export interface ApplicationWithDetails extends Application {
+  programs: Tables<"programs"> | null;
   materials: ApplicationMaterial[];
 }
 
 export function useApplications() {
-  const [applications, setApplications] = useState<Application[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
 
-  const loadApplications = async () => {
-    try {
-      setIsLoading(true);
+  const { data: applications, isLoading } = useQuery({
+    queryKey: ["applications"],
+    queryFn: async (): Promise<ApplicationWithDetails[]> => {
       const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
 
-      if (!user) {
-        throw new Error("用户未登录");
-      }
-
-      const { data: appsData, error: appsError } = await supabase
+      const { data: apps, error } = await supabase
         .from("applications")
-        .select("*")
+        .select("*, programs(*)")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
 
-      if (appsError) throw appsError;
-
-      const applicationsWithMaterials = await Promise.all(
-        (appsData || []).map(async (app) => {
-          const { data: materialsData, error: materialsError } = await supabase
-            .from("application_materials")
-            .select("*")
-            .eq("application_id", app.id)
-            .order("created_at", { ascending: true });
-
-          if (materialsError) throw materialsError;
-
-          return {
-            ...app,
-            materials: materialsData || [],
-          };
-        })
-      );
-
-      setApplications(applicationsWithMaterials);
-    } catch (err: any) {
-      console.error("加载申请失败:", err);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const toggleMaterial = async (materialId: string, newState: boolean) => {
-    try {
-      const { error } = await supabase
-        .from("application_materials")
-        .update({
-          is_completed: newState,
-          completed_at: newState ? new Date().toISOString() : null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", materialId);
-
       if (error) throw error;
 
-      await loadApplications();
-    } catch (err: any) {
-      console.error("更新材料状态失败:", err);
-      throw err;
-    }
+      // Fetch materials for all applications
+      const appIds = (apps || []).map((a) => a.id);
+      const { data: materials } = appIds.length > 0
+        ? await supabase
+            .from("application_materials")
+            .select("*")
+            .in("application_id", appIds)
+            .order("created_at", { ascending: true })
+        : { data: [] };
+
+      return (apps || []).map((app) => ({
+        ...app,
+        programs: app.programs as Tables<"programs"> | null,
+        materials: (materials || []).filter((m) => m.application_id === app.id),
+      }));
+    },
+  });
+
+  const updateApplication = useMutation({
+    mutationFn: async ({
+      id,
+      updates,
+    }: {
+      id: string;
+      updates: TablesUpdate<"applications">;
+    }) => {
+      const { error } = await supabase
+        .from("applications")
+        .update({ ...updates, updated_at: new Date().toISOString() })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["applications"] });
+    },
+  });
+
+  const updateMaterial = useMutation({
+    mutationFn: async ({
+      id,
+      updates,
+    }: {
+      id: string;
+      updates: TablesUpdate<"application_materials">;
+    }) => {
+      const { error } = await supabase
+        .from("application_materials")
+        .update({ ...updates, updated_at: new Date().toISOString() })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["applications"] });
+    },
+  });
+
+  const deleteApplication = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("applications")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["applications"] });
+    },
+  });
+
+  // Stats
+  const stats = {
+    total: applications?.length || 0,
+    inProgress: applications?.filter((a) => a.status === "in_progress").length || 0,
+    submitted: applications?.filter((a) => a.status === "submitted").length || 0,
+    accepted: applications?.filter((a) => a.status === "accepted").length || 0,
+    rejected: applications?.filter((a) => a.status === "rejected").length || 0,
   };
 
-  useEffect(() => {
-    loadApplications();
-  }, []);
+  // Upcoming deadlines (within 7 days)
+  const urgentApps = (applications || []).filter((a) => {
+    if (!a.deadline) return false;
+    const days = Math.ceil(
+      (new Date(a.deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+    );
+    return days >= 0 && days <= 7;
+  });
 
   return {
-    applications,
+    applications: applications || [],
     isLoading,
-    toggleMaterial,
-    refreshApplications: loadApplications,
+    updateApplication: updateApplication.mutate,
+    updateMaterial: updateMaterial.mutate,
+    deleteApplication: deleteApplication.mutate,
+    stats,
+    urgentApps,
   };
 }
