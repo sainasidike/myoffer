@@ -146,6 +146,35 @@ export async function callEdgeFunctionSSE(
 }
 
 /**
+ * Upload a file to the parse-document Edge Function and get AI analysis.
+ */
+export async function callParseDocument(file: File): Promise<string> {
+  const { data: { session } } = await supabase.auth.getSession();
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const headers: Record<string, string> = {
+    apikey: SUPABASE_ANON_KEY,
+  };
+  if (session?.access_token) {
+    headers.Authorization = `Bearer ${session.access_token}`;
+  }
+
+  const resp = await fetch(`${SUPABASE_URL}/functions/v1/parse-document`, {
+    method: "POST",
+    headers,
+    body: formData,
+  });
+
+  const data = await resp.json();
+  if (!resp.ok) {
+    throw new Error(data.error || data.content || `解析失败 (${resp.status})`);
+  }
+
+  return data.content;
+}
+
+/**
  * Extract <<<PROFILE_UPDATE:{...}>>> markers from AI response text.
  * Returns the extracted data and the cleaned text without markers.
  */

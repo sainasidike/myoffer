@@ -1,7 +1,18 @@
 import { useState, useRef, useEffect } from "react";
-import { Paperclip, FileText, ArrowRight, Loader2, Bot, CheckCircle2, Circle } from "lucide-react";
+import {
+  Paperclip,
+  FileText,
+  ArrowRight,
+  Loader2,
+  Bot,
+  CheckCircle2,
+  Circle,
+  Upload,
+  X,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { useOnboardingChat } from "@/hooks/useOnboardingChat";
 import { useProfile } from "@/hooks/useProfile";
 
@@ -15,33 +26,66 @@ const profileFields = [
   { key: "country", label: "目标国家 / 预算" },
 ];
 
+const ACCEPTED_TYPES = ".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp";
+
 export default function OnboardingChat() {
-  const { messages, isStreaming, sendMessage } = useOnboardingChat();
+  const { messages, isStreaming, isParsing, sendMessage, uploadFiles } =
+    useOnboardingChat();
   const { profileCompleteness } = useProfile();
   const [input, setInput] = useState("");
-  const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [uploadedFileNames, setUploadedFileNames] = useState<string[]>([]);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const completionPct = profileCompleteness();
+  const isBusy = isStreaming || isParsing;
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   const handleSend = () => {
-    if (!input.trim() || isStreaming) return;
+    if (!input.trim() || isBusy) return;
     const text = input;
     setInput("");
     sendMessage(text);
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
-    const names = Array.from(files).map((f) => f.name);
-    setUploadedFiles((prev) => [...prev, ...names]);
-    sendMessage(`我上传了以下文件：${names.join(", ")}，请帮我解析其中的信息。`);
+    const newFiles = Array.from(files);
+    setPendingFiles((prev) => [...prev, ...newFiles]);
+    // Reset input so same file can be selected again
+    e.target.value = "";
+  };
+
+  const removePendingFile = (index: number) => {
+    setPendingFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleUpload = async () => {
+    if (pendingFiles.length === 0 || isBusy) return;
+    const files = [...pendingFiles];
+    setUploadedFileNames((prev) => [...prev, ...files.map((f) => f.name)]);
+    setPendingFiles([]);
+    await uploadFiles(files);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const files = Array.from(e.dataTransfer.files).filter((f) => {
+      const ext = f.name.split(".").pop()?.toLowerCase() || "";
+      return ["pdf", "doc", "docx", "png", "jpg", "jpeg", "webp"].includes(ext);
+    });
+    if (files.length > 0) {
+      setPendingFiles((prev) => [...prev, ...files]);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
   };
 
   return (
@@ -55,17 +99,35 @@ export default function OnboardingChat() {
               <Bot className="w-5 h-5 text-primary" />
             </div>
             <div className="flex-1">
-              <div className="text-sm font-semibold text-foreground">MyOffer AI 顾问</div>
-              <div className="text-xs text-muted-foreground">正在收集你的申请信息</div>
+              <div className="text-sm font-semibold text-foreground">
+                MyOffer AI 顾问
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {isParsing
+                  ? "正在解析文档..."
+                  : isStreaming
+                  ? "正在回复..."
+                  : "正在收集你的申请信息"}
+              </div>
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="w-2 h-2 rounded-full bg-green-500" />
-              <span className="text-xs text-muted-foreground">在线</span>
+              <div
+                className={`w-2 h-2 rounded-full ${
+                  isBusy ? "bg-yellow-500 animate-pulse" : "bg-green-500"
+                }`}
+              />
+              <span className="text-xs text-muted-foreground">
+                {isBusy ? "处理中" : "在线"}
+              </span>
             </div>
           </div>
 
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5 bg-muted/30">
+          <div
+            className="flex-1 overflow-y-auto px-6 py-5 space-y-5 bg-muted/30"
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+          >
             {messages.map((msg) => (
               <div
                 key={msg.id}
@@ -85,44 +147,77 @@ export default function OnboardingChat() {
                       : "bg-card text-foreground border border-border rounded-bl-md shadow-sm"
                   }`}
                 >
-                  {msg.content}
+                  {msg.content || (
+                    <div className="flex gap-1">
+                      <div
+                        className="w-2 h-2 rounded-full bg-muted-foreground/40 animate-bounce"
+                        style={{ animationDelay: "0ms" }}
+                      />
+                      <div
+                        className="w-2 h-2 rounded-full bg-muted-foreground/40 animate-bounce"
+                        style={{ animationDelay: "150ms" }}
+                      />
+                      <div
+                        className="w-2 h-2 rounded-full bg-muted-foreground/40 animate-bounce"
+                        style={{ animationDelay: "300ms" }}
+                      />
+                    </div>
+                  )}
                 </div>
                 {msg.role === "user" && (
                   <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-1">
-                    <span className="text-xs font-semibold text-primary">我</span>
+                    <span className="text-xs font-semibold text-primary">
+                      我
+                    </span>
                   </div>
                 )}
               </div>
             ))}
 
-            {isStreaming && messages[messages.length - 1]?.role === "user" && (
-              <div className="flex gap-3 justify-start">
-                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-1">
-                  <Bot className="w-4 h-4 text-primary" />
-                </div>
-                <div className="bg-card border border-border rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
-                  <div className="flex gap-1">
-                    <div className="w-2 h-2 rounded-full bg-muted-foreground/40 animate-bounce" style={{ animationDelay: "0ms" }} />
-                    <div className="w-2 h-2 rounded-full bg-muted-foreground/40 animate-bounce" style={{ animationDelay: "150ms" }} />
-                    <div className="w-2 h-2 rounded-full bg-muted-foreground/40 animate-bounce" style={{ animationDelay: "300ms" }} />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Inline file upload hint */}
-            <div
-              className="border-2 border-dashed border-border rounded-xl px-4 py-3 flex items-center gap-2 cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <FileText className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">
-                支持拖入 PDF、图片、Word 文档，AI 自动解析
-              </span>
-            </div>
-
             <div ref={chatEndRef} />
           </div>
+
+          {/* Pending files preview */}
+          {pendingFiles.length > 0 && (
+            <div className="px-6 py-3 border-t border-border bg-card/80 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">
+                  待上传文件（{pendingFiles.length}）
+                </span>
+                <Button
+                  size="sm"
+                  onClick={handleUpload}
+                  disabled={isBusy}
+                  className="h-7 text-xs"
+                >
+                  {isParsing ? (
+                    <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                  ) : (
+                    <Upload className="w-3 h-3 mr-1" />
+                  )}
+                  开始解析
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {pendingFiles.map((file, i) => (
+                  <Badge
+                    key={`${file.name}-${i}`}
+                    variant="secondary"
+                    className="text-xs flex items-center gap-1 pr-1"
+                  >
+                    <FileText className="w-3 h-3" />
+                    {file.name}
+                    <button
+                      onClick={() => removePendingFile(i)}
+                      className="ml-0.5 hover:text-destructive"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Input Bar */}
           <div className="px-6 py-4 border-t border-border bg-card">
@@ -131,15 +226,17 @@ export default function OnboardingChat() {
                 ref={fileInputRef}
                 type="file"
                 className="hidden"
-                accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                accept={ACCEPTED_TYPES}
                 multiple
-                onChange={handleFileUpload}
+                onChange={handleFileSelect}
               />
               <Button
                 variant="ghost"
                 size="icon"
                 className="shrink-0 text-muted-foreground hover:text-foreground"
                 onClick={() => fileInputRef.current?.click()}
+                disabled={isBusy}
+                title="上传文件（PDF、Word、图片）"
               >
                 <Paperclip className="w-5 h-5" />
               </Button>
@@ -147,14 +244,18 @@ export default function OnboardingChat() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSend()}
-                placeholder="输入回复，或上传文件..."
+                placeholder={
+                  isParsing
+                    ? "文档解析中，请稍候..."
+                    : "输入回复，或点击左侧按钮上传文件..."
+                }
                 className="flex-1"
-                disabled={isStreaming}
+                disabled={isBusy}
               />
               <Button
                 size="icon"
                 onClick={handleSend}
-                disabled={!input.trim() || isStreaming}
+                disabled={!input.trim() || isBusy}
               >
                 {isStreaming ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -170,10 +271,14 @@ export default function OnboardingChat() {
         <div className="w-[280px] border-l border-border bg-card p-5 space-y-5 overflow-y-auto hidden lg:block">
           {/* Profile completeness */}
           <div className="rounded-xl border border-border p-4 space-y-4">
-            <div className="text-sm font-semibold text-foreground">档案完整度</div>
+            <div className="text-sm font-semibold text-foreground">
+              档案完整度
+            </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">已收集信息</span>
-              <span className="text-lg font-bold text-primary">{completionPct}%</span>
+              <span className="text-lg font-bold text-primary">
+                {completionPct}%
+              </span>
             </div>
             <div className="w-full h-2 rounded-full bg-muted overflow-hidden">
               <div
@@ -183,15 +288,22 @@ export default function OnboardingChat() {
             </div>
             <div className="space-y-2.5 pt-1">
               {profileFields.map((f) => {
-                const done = completionPct > 0; // simplified check
+                const done = completionPct > 0;
                 return (
-                  <div key={f.key} className="flex items-center gap-2.5 text-sm">
+                  <div
+                    key={f.key}
+                    className="flex items-center gap-2.5 text-sm"
+                  >
                     {done ? (
                       <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
                     ) : (
                       <Circle className="w-4 h-4 text-muted-foreground/30 shrink-0" />
                     )}
-                    <span className={done ? "text-foreground" : "text-muted-foreground"}>
+                    <span
+                      className={
+                        done ? "text-foreground" : "text-muted-foreground"
+                      }
+                    >
                       {f.label}
                     </span>
                   </div>
@@ -202,24 +314,31 @@ export default function OnboardingChat() {
 
           {/* Uploaded materials */}
           <div className="rounded-xl border border-border p-4 space-y-3">
-            <div className="text-sm font-semibold text-foreground">上传的材料</div>
-            {uploadedFiles.length > 0 ? (
+            <div className="text-sm font-semibold text-foreground">
+              已解析材料
+            </div>
+            {uploadedFileNames.length > 0 ? (
               <div className="space-y-2">
-                {uploadedFiles.map((name, i) => (
+                {uploadedFileNames.map((name, i) => (
                   <div
                     key={i}
                     className="text-xs text-foreground bg-muted rounded-lg px-3 py-2 truncate flex items-center gap-2"
                   >
-                    <Paperclip className="w-3 h-3 text-muted-foreground shrink-0" />
+                    <CheckCircle2 className="w-3 h-3 text-green-500 shrink-0" />
                     {name}
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="border border-dashed border-border rounded-lg p-6 text-center">
-                <FileText className="w-8 h-8 mx-auto text-muted-foreground/30 mb-2" />
-                <p className="text-xs text-muted-foreground">暂无上传文件</p>
-                <p className="text-xs text-muted-foreground mt-1">点击对话框附件按钮上传</p>
+              <div
+                className="border border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Upload className="w-8 h-8 mx-auto text-muted-foreground/30 mb-2" />
+                <p className="text-xs text-muted-foreground">点击上传文件</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  支持 PDF、Word、图片
+                </p>
               </div>
             )}
           </div>

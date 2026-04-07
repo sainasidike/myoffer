@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from "react";
-import { callEdgeFunction, extractProfileUpdates } from "@/lib/ai";
+import { callEdgeFunction, callParseDocument, extractProfileUpdates } from "@/lib/ai";
 import { useProfile } from "./useProfile";
 
 export interface ChatMessage {
@@ -40,12 +40,28 @@ function mapToDbFields(updates: Record<string, unknown>): Record<string, unknown
 export function useOnboardingChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [isParsing, setIsParsing] = useState(false);
   const { profile, updateProfileAsync } = useProfile();
   const abortRef = useRef(false);
 
+  const applyProfileUpdates = useCallback(
+    async (text: string) => {
+      const { cleanText, updates } = extractProfileUpdates(text);
+      if (Object.keys(updates).length > 0) {
+        try {
+          await updateProfileAsync(mapToDbFields(updates));
+        } catch (err) {
+          console.error("Failed to save profile updates:", err);
+        }
+      }
+      return cleanText;
+    },
+    [updateProfileAsync]
+  );
+
   const sendMessage = useCallback(
-    async (userText: string, fileUrl?: string) => {
-      if (isStreaming) return;
+    async (userText: string) => {
+      if (isStreaming || isParsing) return;
 
       const userMsg: ChatMessage = {
         id: crypto.randomUUID(),
@@ -63,7 +79,6 @@ export function useOnboardingChat() {
       setIsStreaming(true);
       abortRef.current = false;
 
-      // Build messages for the API (convert to assistant/user roles)
       const apiMessages = [...messages, userMsg].map((m) => ({
         role: m.role === "ai" ? "assistant" : "user",
         content: m.content,
@@ -73,7 +88,6 @@ export function useOnboardingChat() {
         messages: apiMessages,
         profileData: profile || {},
       };
-      if (fileUrl) body.file_url = fileUrl;
 
       await callEdgeFunction("onboarding-chat", body, {
         onToken: (token) => {
@@ -88,9 +102,7 @@ export function useOnboardingChat() {
           });
         },
         onDone: async (fullText) => {
-          const { cleanText, updates } = extractProfileUpdates(fullText);
-
-          // Update the displayed message with clean text
+          const cleanText = await applyProfileUpdates(fullText);
           setMessages((prev) => {
             const updated = [...prev];
             const last = updated[updated.length - 1];
@@ -99,16 +111,6 @@ export function useOnboardingChat() {
             }
             return updated;
           });
-
-          // Save extracted profile updates to database
-          if (Object.keys(updates).length > 0) {
-            try {
-              await updateProfileAsync(mapToDbFields(updates));
-            } catch (err) {
-              console.error("Failed to save profile updates:", err);
-            }
-          }
-
           setIsStreaming(false);
         },
         onError: (error) => {
@@ -124,19 +126,88 @@ export function useOnboardingChat() {
         },
       });
     },
-    [isStreaming, messages, profile, updateProfileAsync]
+    [isStreaming, isParsing, messages, profile, applyProfileUpdates]
+  );
+
+  /**
+   * Upload and parse multiple files via AI.
+   * Each file is sent to parse-document Edge Function.
+   * Results are shown as AI messages in the chat.
+   */
+  const uploadFiles = useCallback(
+    async (files: File[]) => {
+      if (isStreaming || isParsing || files.length === 0) return;
+
+      setIsParsing(true);
+
+      const fileNames = files.map((f) => f.name).join("、");
+      const userMsg: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: "user",
+        content: `我上传了${files.length > 1 ? `${files.length}个` : ""}文件：${fileNames}`,
+      };
+      setMessages((prev) => [...prev, userMsg]);
+
+      for (const file of files) {
+        const aiMsg: ChatMessage = {
+          id: crypto.randomUUID(),
+          role: "ai",
+          content: "",
+        };
+        setMessages((prev) => [...prev, aiMsg]);
+
+        try {
+          const prefix = files.length > 1 ? `**${file.name}** 解析结果：\n\n` : "";
+          const content = await callParseDocument(file);
+          const cleanText = await applyProfileUpdates(content);
+
+          setMessages((prev) => {
+            const updated = [...prev];
+            const last = updated[updated.length - 1];
+            if (last.role === "ai") {
+              last.content = prefix + cleanText;
+            }
+            return updated;
+          });
+        } catch (err) {
+          setMessages((prev) => {
+            const updated = [...prev];
+            const last = updated[updated.length - 1];
+            if (last.role === "ai") {
+              last.content = `解析 ${file.name} 失败：${err instanceof Error ? err.message : "未知错误"}。你可以直接在对话中告诉我文档中的信息。`;
+            }
+            return updated;
+          });
+        }
+      }
+
+      // After all files parsed, add a confirmation prompt
+      const confirmMsg: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: "ai",
+        content:
+          "以上是我从文档中提取的信息。请确认这些信息是否准确？如果有任何不对的地方，直接告诉我，我来帮你修改。\n\n如果信息正确，我们可以继续补充其他申请信息。",
+      };
+      setMessages((prev) => [...prev, confirmMsg]);
+
+      setIsParsing(false);
+    },
+    [isStreaming, isParsing, applyProfileUpdates]
   );
 
   const resetChat = useCallback(() => {
     setMessages([]);
     setIsStreaming(false);
+    setIsParsing(false);
     abortRef.current = true;
   }, []);
 
   return {
     messages,
     isStreaming,
+    isParsing,
     sendMessage,
+    uploadFiles,
     resetChat,
   };
 }
