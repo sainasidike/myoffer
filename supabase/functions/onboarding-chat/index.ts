@@ -1,120 +1,92 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
 };
 
-Deno.serve(async (req) => {
+serve(async (req) => {
   if (req.method === "OPTIONS")
     return new Response(null, { headers: corsHeaders });
 
   try {
-    const { messages, profileData } = await req.json();
-    const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
-
-    if (!ANTHROPIC_API_KEY) {
-      throw new Error("ANTHROPIC_API_KEY is not configured");
-    }
+    const { messages, profileData, file_url } = await req.json();
+    const ZHIPU_API_KEY = Deno.env.get("ZHIPU_API_KEY");
+    if (!ZHIPU_API_KEY) throw new Error("ZHIPU_API_KEY is not configured");
 
     const filledFields = Object.entries(profileData || {})
       .filter(([_, v]) => v)
       .map(([k, v]) => `${k}: ${v}`)
       .join("\n");
 
-    const systemPrompt = `## 角色
-你是一个专业的留学申请助手（MyOffer AI 顾问），服务于中国学生的留学申请。
+    const systemPrompt = `你是MyOffer平台的专业留学申请顾问，正在帮助中国学生整理留学申请所需信息。
 
-## 重要：你已经完成了以下步骤，严禁重复
-1. 你已经问过用户想申请的阶段（本科/硕士/博士），用户已回答。
-2. 你已经提示过用户可以上传材料（成绩单、简历等），严禁再次提示。
-3. 现在你应该直接进入信息采集的下一步。
+你的工作方式：
+- 每次只提问1个问题，等用户回答后再继续
+- 已经知道的信息不重复询问
+- 语气亲切自然，像朋友一样交流，适当使用emoji
+- 用户上传文件时，你会收到文件相关信息，根据信息更新已知内容并继续追问缺失内容
+- 当用户想跳过某个问题时，礼貌接受并继续下一个
+- 收集完足够信息后，主动提出生成档案摘要
+- 始终用中文回复
 
-## 当前已收集的信息
+当前已收集的信息：
 ${filledFields || "（暂无）"}
 
-## 交互准则
+需要收集的信息字段（按优先级顺序追问）：
+1. 学术背景：当前学历、目标学历、就读学校、专业方向、是否有意向跨专业申请、GPA/均分
+2. 标准化成绩：语言成绩类型（托福/雅思）及分数、GRE/GMAT分数
+3. 软实力经历：实习经历、科研经历（含论文发表）、竞赛获奖、创业经历、志愿服务、海外经历、其他课外经历
+4. 申请偏好：目标国家/地区、留学预算、申请学年、奖学金要求、目标院校排名要求、特殊需求
 
-### 1. 对话风格
-- 语气亲切、专业，像朋友一样交流，适当使用emoji
-- 始终用中文回复
-- 每次只追问 1-2 个信息点，严禁一次性抛出多个问题
-- 必须等待用户回答后，才能继续下一个问题
-
-### 2. 文档处理
-- 用户上传文档后，立即反馈解析结果（例如："我已经成功解析了你的成绩单，其中包含以下信息：……"）
-- 解析失败时明确提示
-- 已从文档中提取到的信息，严禁再次询问
-
-### 3. 信息采集清单（按优先级顺序追问，跳过已收集的）
-
-#### 3.1 学术背景
-- school: 就读/毕业的学校
-- major: 专业方向（& 是否跨专业申请）
-- gpa: GPA/均分（以及评分标准）
-
-#### 3.2 标准化成绩
-- languageType + languageScore: 语言成绩类型和分数（含小分）
-- greGmat: GRE/GMAT
-
-#### 3.3 软实力与经历
-- internship: 实习经历
-- research: 科研项目
-- awards: 竞赛获奖
-- entrepreneurship: 创业经历
-- volunteer: 志愿服务
-- overseas: 海外交换/游学
-- otherActivities: 其他课外经历
-
-#### 3.4 申请偏好（核心信息采集完成后追问）
-- targetCountry: 目标国家/地区
-- budget: 留学预算
-- targetYear: 申请学年
-- scholarship: 奖学金要求
-- rankingReq: 目标院校排名要求
-- specialNeeds: 特殊需求
-
-### 4. 追问策略
-- 每次仅追问 1-2 个信息点
-- 用户跳过时尊重选择，直接下一个
-- 用户上传文件时立即解析并补充
-
-### 5. 数据同步规则
-- 当用户回答问题时，在回复末尾另起一行用以下格式标注：
+重要规则：
+- 当用户回答问题时，在你的回复末尾（另起一行）用以下格式标注提取到的信息：
   <<<PROFILE_UPDATE:{"字段名":"值"}>>>
 - 可用字段名：targetDegree, currentEducation, school, major, crossMajor, gpa, languageType, languageScore, greGmat, internship, research, awards, entrepreneurship, volunteer, overseas, otherActivities, targetCountry, budget, targetYear, scholarship, rankingReq, specialNeeds
 - 每次只提取本轮新获得的信息
-- 用户看不到<<<PROFILE_UPDATE>>>标记
+- 用户看不到<<<PROFILE_UPDATE>>>标记，它会被前端自动隐藏
+- 当用户上传文件时，尽可能从文件描述中提取信息并用同样格式标注`;
 
-### 6. 完成度与总结
-- 信息采集达到 60% 或用户要求时，生成结构化档案摘要`;
+    // Build OpenAI-compatible messages array
+    const apiMessages = [
+      { role: "system", content: systemPrompt },
+      ...messages.map((msg: { role: string; content: string }) => ({
+        role: msg.role === "ai" ? "assistant" : msg.role,
+        content: msg.content,
+      })),
+    ];
 
-    const claudeMessages = messages
-      .filter((msg: any) => msg.role !== "system")
-      .map((msg: any) => ({
-        role: msg.role === "assistant" ? "assistant" : "user",
-        content: msg.content
-      }));
+    // If file_url is provided, append OCR instruction to the last user message
+    if (file_url && apiMessages.length > 0) {
+      const lastMsg = apiMessages[apiMessages.length - 1];
+      if (lastMsg.role === "user") {
+        lastMsg.content += `\n\n[用户上传了文件: ${file_url}，请根据文件内容提取相关信息]`;
+      }
+    }
 
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-3-5-sonnet-20241022",
-        max_tokens: 2048,
-        temperature: 0.7,
-        system: systemPrompt,
-        messages: claudeMessages,
-        stream: true,
-      }),
-    });
+    // Call 智谱 GLM-4-Flash (OpenAI-compatible format)
+    const response = await fetch(
+      "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${ZHIPU_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: "glm-4-flash",
+          messages: apiMessages,
+          stream: true,
+          temperature: 0.8,
+          max_tokens: 2048,
+        }),
+      }
+    );
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("Claude API error:", response.status, errorText);
+      console.error("Zhipu API error:", response.status, errorText);
 
       if (response.status === 429) {
         return new Response(
@@ -129,63 +101,12 @@ ${filledFields || "（暂无）"}
       );
     }
 
-    const reader = response.body?.getReader();
-    if (!reader) throw new Error("No response body");
-
-    const encoder = new TextEncoder();
-    const decoder = new TextDecoder();
-
-    const stream = new ReadableStream({
-      async start(controller) {
-        try {
-          let buffer = "";
-
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split("\n");
-            buffer = lines.pop() || "";
-
-            for (const line of lines) {
-              if (!line.trim() || !line.startsWith("data: ")) continue;
-
-              const data = line.slice(6);
-              if (data === "[DONE]") continue;
-
-              try {
-                const json = JSON.parse(data);
-
-                if (json.type === "content_block_delta") {
-                  const text = json.delta?.text;
-                  if (text) {
-                    const sseData = `data: ${JSON.stringify({
-                      choices: [{ delta: { content: text } }]
-                    })}\n\n`;
-                    controller.enqueue(encoder.encode(sseData));
-                  }
-                }
-              } catch (e) {
-                console.error("Parse error:", e);
-              }
-            }
-          }
-
-          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-          controller.close();
-        } catch (e) {
-          console.error("Stream error:", e);
-          controller.error(e);
-        }
-      },
-    });
-
-    return new Response(stream, {
+    // 智谱 already returns OpenAI-compatible SSE format, pass through directly
+    return new Response(response.body, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
   } catch (e) {
-    console.error("Chat error:", e);
+    console.error("chat error:", e);
     return new Response(
       JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

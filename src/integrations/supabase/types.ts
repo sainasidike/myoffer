@@ -10,196 +10,362 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.4"
+    PostgrestVersion: "14.5"
+  }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
+      application_materials: {
+        Row: {
+          application_id: string
+          created_at: string | null
+          due_date: string | null
+          essay_id: string | null
+          file_url: string | null
+          id: string
+          material_name: string
+          material_type: string
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          application_id: string
+          created_at?: string | null
+          due_date?: string | null
+          essay_id?: string | null
+          file_url?: string | null
+          id?: string
+          material_name: string
+          material_type: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          application_id?: string
+          created_at?: string | null
+          due_date?: string | null
+          essay_id?: string | null
+          file_url?: string | null
+          id?: string
+          material_name?: string
+          material_type?: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_materials_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_materials_essay_id_fkey"
+            columns: ["essay_id"]
+            isOneToOne: false
+            referencedRelation: "essays"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      applications: {
+        Row: {
+          created_at: string | null
+          deadline: string | null
+          id: string
+          notes: string | null
+          program_id: string
+          status: string | null
+          target_round: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          deadline?: string | null
+          id?: string
+          notes?: string | null
+          program_id: string
+          status?: string | null
+          target_round?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          deadline?: string | null
+          id?: string
+          notes?: string | null
+          program_id?: string
+          status?: string | null
+          target_round?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "applications_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "programs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      essay_conversations: {
+        Row: {
+          content: string
+          created_at: string | null
+          essay_id: string
+          id: string
+          role: string
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          essay_id: string
+          id?: string
+          role: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          essay_id?: string
+          id?: string
+          role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "essay_conversations_essay_id_fkey"
+            columns: ["essay_id"]
+            isOneToOne: false
+            referencedRelation: "essays"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      essays: {
+        Row: {
+          ai_model: string | null
+          application_id: string | null
+          content: string | null
+          created_at: string | null
+          essay_type: string
+          id: string
+          status: string | null
+          title: string | null
+          updated_at: string | null
+          user_id: string
+          version: number | null
+        }
+        Insert: {
+          ai_model?: string | null
+          application_id?: string | null
+          content?: string | null
+          created_at?: string | null
+          essay_type: string
+          id?: string
+          status?: string | null
+          title?: string | null
+          updated_at?: string | null
+          user_id: string
+          version?: number | null
+        }
+        Update: {
+          ai_model?: string | null
+          application_id?: string | null
+          content?: string | null
+          created_at?: string | null
+          essay_type?: string
+          id?: string
+          status?: string | null
+          title?: string | null
+          updated_at?: string | null
+          user_id?: string
+          version?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "essays_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
+          awards: string[] | null
+          budget: string | null
           created_at: string
+          cross_major: boolean | null
+          current_education: string | null
+          gpa: number | null
+          gpa_scale: number | null
+          gre_gmat: Json | null
           id: string
+          internship: string[] | null
+          language_score: Json | null
+          language_type: string | null
+          major: string | null
+          onboarding_completed: boolean | null
+          profile_summary: string | null
+          ranking_req: string | null
+          research: string[] | null
+          school: string | null
+          special_needs: string | null
+          target_country: string[] | null
+          target_degree: string | null
+          target_year: number | null
           user_display_id: string
           username: string
         }
         Insert: {
+          awards?: string[] | null
+          budget?: string | null
           created_at?: string
+          cross_major?: boolean | null
+          current_education?: string | null
+          gpa?: number | null
+          gpa_scale?: number | null
+          gre_gmat?: Json | null
           id: string
+          internship?: string[] | null
+          language_score?: Json | null
+          language_type?: string | null
+          major?: string | null
+          onboarding_completed?: boolean | null
+          profile_summary?: string | null
+          ranking_req?: string | null
+          research?: string[] | null
+          school?: string | null
+          special_needs?: string | null
+          target_country?: string[] | null
+          target_degree?: string | null
+          target_year?: number | null
           user_display_id: string
           username: string
         }
         Update: {
+          awards?: string[] | null
+          budget?: string | null
           created_at?: string
+          cross_major?: boolean | null
+          current_education?: string | null
+          gpa?: number | null
+          gpa_scale?: number | null
+          gre_gmat?: Json | null
           id?: string
+          internship?: string[] | null
+          language_score?: Json | null
+          language_type?: string | null
+          major?: string | null
+          onboarding_completed?: boolean | null
+          profile_summary?: string | null
+          ranking_req?: string | null
+          research?: string[] | null
+          school?: string | null
+          special_needs?: string | null
+          target_country?: string[] | null
+          target_degree?: string | null
+          target_year?: number | null
           user_display_id?: string
           username?: string
         }
         Relationships: []
       }
-      school_programs: {
+      programs: {
         Row: {
-          accept_list: string | null
-          application_materials: string | null
-          avg_score: number | null
+          application_link: string | null
           country: string
-          created_at: string
-          deadline: string | null
-          degree: string
+          created_at: string | null
+          deadline: Json | null
+          degree_type: string
+          department: string | null
+          description: string | null
           duration: string | null
-          field: string
+          gpa_requirement: number | null
+          gre_required: boolean | null
           id: string
-          link: string | null
-          living_cost: string | null
-          notes: string | null
-          prestige: number | null
-          program: string
+          language_requirement: Json | null
+          program_name: string
+          program_name_cn: string | null
           qs_ranking: number | null
-          require_gpa: string | null
-          require_lang: string | null
-          rolling_admission: boolean | null
-          scholarship: string | null
-          school: string
+          required_materials: string[] | null
+          tags: string[] | null
           tuition: string | null
-          type: string | null
-          updated_at: string
+          university_name: string
+          university_name_cn: string | null
         }
         Insert: {
-          accept_list?: string | null
-          application_materials?: string | null
-          avg_score?: number | null
+          application_link?: string | null
           country: string
-          created_at?: string
-          deadline?: string | null
-          degree: string
+          created_at?: string | null
+          deadline?: Json | null
+          degree_type: string
+          department?: string | null
+          description?: string | null
           duration?: string | null
-          field: string
+          gpa_requirement?: number | null
+          gre_required?: boolean | null
           id?: string
-          link?: string | null
-          living_cost?: string | null
-          notes?: string | null
-          prestige?: number | null
-          program: string
+          language_requirement?: Json | null
+          program_name: string
+          program_name_cn?: string | null
           qs_ranking?: number | null
-          require_gpa?: string | null
-          require_lang?: string | null
-          rolling_admission?: boolean | null
-          scholarship?: string | null
-          school: string
+          required_materials?: string[] | null
+          tags?: string[] | null
           tuition?: string | null
-          type?: string | null
-          updated_at?: string
+          university_name: string
+          university_name_cn?: string | null
         }
         Update: {
-          accept_list?: string | null
-          application_materials?: string | null
-          avg_score?: number | null
+          application_link?: string | null
           country?: string
-          created_at?: string
-          deadline?: string | null
-          degree?: string
+          created_at?: string | null
+          deadline?: Json | null
+          degree_type?: string
+          department?: string | null
+          description?: string | null
           duration?: string | null
-          field?: string
+          gpa_requirement?: number | null
+          gre_required?: boolean | null
           id?: string
-          link?: string | null
-          living_cost?: string | null
-          notes?: string | null
-          prestige?: number | null
-          program?: string
+          language_requirement?: Json | null
+          program_name?: string
+          program_name_cn?: string | null
           qs_ranking?: number | null
-          require_gpa?: string | null
-          require_lang?: string | null
-          rolling_admission?: boolean | null
-          scholarship?: string | null
-          school?: string
+          required_materials?: string[] | null
+          tags?: string[] | null
           tuition?: string | null
-          type?: string | null
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      user_onboarding_profiles: {
-        Row: {
-          awards: string | null
-          budget: string | null
-          created_at: string
-          cross_major: string | null
-          current_education: string | null
-          entrepreneurship: string | null
-          gpa: string | null
-          gre_gmat: string | null
-          id: string
-          internship: string | null
-          language_score: string | null
-          language_type: string | null
-          major: string | null
-          other_activities: string | null
-          overseas: string | null
-          ranking_req: string | null
-          research: string | null
-          scholarship: string | null
-          school: string | null
-          special_needs: string | null
-          target_country: string | null
-          target_degree: string | null
-          target_year: string | null
-          updated_at: string
-          user_id: string
-          volunteer: string | null
-        }
-        Insert: {
-          awards?: string | null
-          budget?: string | null
-          created_at?: string
-          cross_major?: string | null
-          current_education?: string | null
-          entrepreneurship?: string | null
-          gpa?: string | null
-          gre_gmat?: string | null
-          id?: string
-          internship?: string | null
-          language_score?: string | null
-          language_type?: string | null
-          major?: string | null
-          other_activities?: string | null
-          overseas?: string | null
-          ranking_req?: string | null
-          research?: string | null
-          scholarship?: string | null
-          school?: string | null
-          special_needs?: string | null
-          target_country?: string | null
-          target_degree?: string | null
-          target_year?: string | null
-          updated_at?: string
-          user_id: string
-          volunteer?: string | null
-        }
-        Update: {
-          awards?: string | null
-          budget?: string | null
-          created_at?: string
-          cross_major?: string | null
-          current_education?: string | null
-          entrepreneurship?: string | null
-          gpa?: string | null
-          gre_gmat?: string | null
-          id?: string
-          internship?: string | null
-          language_score?: string | null
-          language_type?: string | null
-          major?: string | null
-          other_activities?: string | null
-          overseas?: string | null
-          ranking_req?: string | null
-          research?: string | null
-          scholarship?: string | null
-          school?: string | null
-          special_needs?: string | null
-          target_country?: string | null
-          target_degree?: string | null
-          target_year?: string | null
-          updated_at?: string
-          user_id?: string
-          volunteer?: string | null
+          university_name?: string
+          university_name_cn?: string | null
         }
         Relationships: []
       }
@@ -337,6 +503,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },
