@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Send, Copy, Save, Plus, Loader2, FileText } from "lucide-react";
+import { Send, Copy, Save, Plus, Loader2, FileText, Bot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
@@ -48,7 +48,6 @@ export default function EssayWriting() {
     .split(/\s+/)
     .filter((w) => w.length > 0).length;
 
-  // Load essay content when selected
   useEffect(() => {
     if (selectedEssayId) {
       const essay = essays.find((e) => e.id === selectedEssayId);
@@ -104,16 +103,13 @@ export default function EssayWriting() {
     toast({ title: "文书已保存" });
   };
 
-  // Extract essay content from AI response if it contains markdown code block
   const handleApplyFromChat = (content: string) => {
-    // Look for markdown code blocks or long English text
     const codeBlockMatch = content.match(/```[\s\S]*?\n([\s\S]+?)```/);
     if (codeBlockMatch) {
       setEssayContent(codeBlockMatch[1].trim());
       toast({ title: "已应用到编辑器" });
       return;
     }
-    // Look for "Dear" starting text (likely a full essay)
     const essayMatch = content.match(/(Dear[\s\S]{200,})/);
     if (essayMatch) {
       setEssayContent(essayMatch[1].trim());
@@ -128,7 +124,10 @@ export default function EssayWriting() {
         {/* Header with essay list */}
         <div className="px-4 py-3 border-b border-border bg-card space-y-2">
           <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-sm">AI 文书助手</h2>
+            <div className="flex items-center gap-2">
+              <Bot className="w-4 h-4 text-primary" />
+              <h2 className="font-semibold text-sm">AI 文书助手</h2>
+            </div>
             <Button size="sm" variant="outline" onClick={handleNewEssay}>
               <Plus className="w-3 h-3 mr-1" />
               新建文书
@@ -158,7 +157,7 @@ export default function EssayWriting() {
         </div>
 
         {/* Chat messages */}
-        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 bg-muted/30">
           {chatMessages.length === 0 && !selectedEssayId && (
             <div className="text-center py-12">
               <FileText className="w-10 h-10 mx-auto text-muted-foreground/30 mb-3" />
@@ -191,7 +190,7 @@ export default function EssayWriting() {
                 className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
                   msg.role === "user"
                     ? "bg-primary text-primary-foreground rounded-br-md"
-                    : "bg-card text-card-foreground border border-border rounded-bl-md"
+                    : "bg-card text-card-foreground border border-border rounded-bl-md shadow-sm"
                 }`}
               >
                 {msg.content}
@@ -211,8 +210,12 @@ export default function EssayWriting() {
 
           {isStreaming && (
             <div className="flex justify-start">
-              <div className="bg-card border border-border rounded-2xl rounded-bl-md px-4 py-3">
-                <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+              <div className="bg-card border border-border rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
+                <div className="flex gap-1">
+                  <div className="w-2 h-2 rounded-full bg-muted-foreground/40 animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <div className="w-2 h-2 rounded-full bg-muted-foreground/40 animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <div className="w-2 h-2 rounded-full bg-muted-foreground/40 animate-bounce" style={{ animationDelay: "300ms" }} />
+                </div>
               </div>
             </div>
           )}
@@ -289,8 +292,8 @@ export default function EssayWriting() {
             <textarea
               value={essayContent}
               onChange={(e) => setEssayContent(e.target.value)}
-              className="w-full h-full resize-none bg-transparent text-sm leading-relaxed focus:outline-none"
-              placeholder="在这里撰写或编辑你的文书...&#10;&#10;你可以：&#10;1. 直接在这里写&#10;2. 在左侧和 AI 对话，让 AI 帮你生成&#10;3. 点击 AI 回复中的「应用到编辑器」按钮"
+              className="w-full h-full resize-none bg-transparent text-sm leading-relaxed focus:outline-none placeholder:text-muted-foreground/50"
+              placeholder={"在这里撰写或编辑你的文书...\n\n你可以：\n1. 直接在这里写\n2. 在左侧和 AI 对话，让 AI 帮你生成\n3. 点击 AI 回复中的「应用到编辑器」按钮"}
             />
           ) : (
             <div className="flex items-center justify-center h-full text-muted-foreground text-sm">

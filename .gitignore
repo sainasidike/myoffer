@@ -56,3 +56,4 @@ env/
 # Environment variables
 .env
 .env.local
+.vercel

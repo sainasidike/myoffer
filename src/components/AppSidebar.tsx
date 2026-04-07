@@ -18,20 +18,20 @@ const navItems = [
   { title: "设置", path: "/settings", icon: Settings },
 ];
 
-export function AppSidebar() {
+export function AppSidebar({ onNavigate }: { onNavigate?: () => void } = {}) {
   const location = useLocation();
   const { profile, signOut } = useAuth();
 
   return (
-    <aside className="flex flex-col w-60 min-h-screen bg-gray-900 shrink-0 border-r border-gray-800">
+    <aside className="flex flex-col w-60 min-h-screen bg-sidebar shrink-0 border-r border-sidebar-border">
       {/* Logo */}
       <div className="flex items-center gap-3 px-5 py-6">
-        <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-blue-500 font-bold text-white text-lg">
+        <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-primary font-bold text-primary-foreground text-lg">
           M
         </div>
         <div>
-          <div className="text-white font-semibold text-base tracking-wide">MyOffer</div>
-          <div className="text-gray-400 text-xs">留学申请平台</div>
+          <div className="text-foreground font-semibold text-base tracking-wide">MyOffer</div>
+          <div className="text-muted-foreground text-xs">留学申请平台</div>
         </div>
       </div>
 
@@ -43,10 +43,11 @@ export function AppSidebar() {
             <RouterNavLink
               key={item.path}
               to={item.path}
+              onClick={onNavigate}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 ${
                 active
-                  ? "bg-blue-500 text-white font-medium"
-                  : "text-gray-300 hover:bg-gray-800 hover:text-white"
+                  ? "bg-primary text-primary-foreground font-medium"
+                  : "text-muted-foreground hover:bg-accent hover:text-foreground"
               }`}
             >
               <item.icon className="w-[18px] h-[18px]" />
@@ -63,21 +64,21 @@ export function AppSidebar() {
 
       {/* User */}
       <div className="px-3 pb-5">
-        <div className="flex items-center gap-3 px-3 py-3 rounded-lg bg-gray-800 border border-gray-700">
-          <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-700 text-gray-300">
+        <div className="flex items-center gap-3 px-3 py-3 rounded-lg bg-accent border border-border">
+          <div className="flex items-center justify-center w-8 h-8 rounded-full bg-muted text-muted-foreground">
             <User className="w-4 h-4" />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="text-white text-sm font-medium truncate">
+            <div className="text-foreground text-sm font-medium truncate">
               {profile?.username ?? "加载中..."}
             </div>
-            <div className="text-gray-400 text-xs truncate">
+            <div className="text-muted-foreground text-xs truncate">
               {profile?.user_display_id ?? ""}
             </div>
           </div>
           <button
             onClick={signOut}
-            className="text-gray-400 hover:text-red-400 transition-colors"
+            className="text-muted-foreground hover:text-destructive transition-colors"
             title="退出登录"
           >
             <LogOut className="w-4 h-4" />
