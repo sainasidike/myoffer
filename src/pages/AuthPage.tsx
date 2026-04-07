@@ -30,9 +30,10 @@ export default function AuthPage() {
     return <Navigate to="/onboarding" replace />;
   }
 
-  // 将用户名转换为虚拟邮箱格式传给 Supabase Auth
-  // 注意：需要在 Supabase Dashboard → Authentication → Providers → Email 中关闭 "Confirm email" 选项
   const fakeEmail = (name: string) => `${name.toLowerCase()}@myoffer.app`;
+
+  const SUPABASE_URL = "https://evumyskbzakiatiagmpq.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2dW15c2tiemFraWF0aWFnbXBxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1NDQ3MDMsImV4cCI6MjA5MTEyMDcwM30.w8P3scSa3AtA0TqryqYHW42ONRXLKcSdIUgYT4TH1G8";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,19 +68,31 @@ export default function AuthPage() {
         toast.success("登录成功！");
         navigate("/onboarding");
       } else {
-        const { error } = await supabase.auth.signUp({
+        // Call signup Edge Function (uses admin API to auto-confirm email)
+        const signupResp = await fetch(
+          `${SUPABASE_URL}/functions/v1/signup`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              apikey: SUPABASE_ANON_KEY,
+            },
+            body: JSON.stringify({ username, password }),
+          }
+        );
+        const signupData = await signupResp.json();
+        if (!signupResp.ok) {
+          toast.error(signupData.error || "注册失败");
+          return;
+        }
+        // Auto sign-in after successful registration
+        const { error: signInError } = await supabase.auth.signInWithPassword({
           email: fakeEmail(username),
           password,
-          options: {
-            data: { username },
-          },
         });
-        if (error) {
-          if (error.message.includes("already registered")) {
-            toast.error("该用户名已被注册");
-          } else {
-            toast.error(error.message);
-          }
+        if (signInError) {
+          toast.error("注册成功但登录失败，请手动登录");
+          setIsLogin(true);
           return;
         }
         toast.success("注册成功！");
