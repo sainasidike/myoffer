@@ -52,8 +52,8 @@ serve(async (req) => {
     // Step 2: Build AI prompt
     const programList = programs
       .map(
-        (p, i) =>
-          `${i + 1}. ${p.university_name}${p.university_name_cn ? `(${p.university_name_cn})` : ""} - ${p.program_name}${p.program_name_cn ? `(${p.program_name_cn})` : ""} | ${p.country} | QS排名: ${p.qs_ranking || "未知"} | GPA要求: ${p.gpa_requirement || "未知"} | 学费: ${p.tuition || "未知"} | 学制: ${p.duration || "未知"} | GRE要求: ${p.gre_required ? "是" : "否"} | 标签: ${(p.tags || []).join(",")}`
+        (p) =>
+          `[ID:${p.id}] ${p.university_name}${p.university_name_cn ? `(${p.university_name_cn})` : ""} - ${p.program_name}${p.program_name_cn ? `(${p.program_name_cn})` : ""} | ${p.country} | QS排名: ${p.qs_ranking || "未知"} | GPA要求: ${p.gpa_requirement || "未知"} | 学费: ${p.tuition || "未知"} | 学制: ${p.duration || "未知"} | GRE要求: ${p.gre_required ? "是" : "否"} | 标签: ${(p.tags || []).join(",")}`
       )
       .join("\n");
 
@@ -83,7 +83,9 @@ GRE/GMAT: ${profile.gre_gmat ? JSON.stringify(profile.gre_gmat) : "无"}
 
 第二部分：匹配结果（输出一个JSON数组，前面加 [RESULT] 标记）
 [RESULT]
-[{"program_id":"xxx","probability":75,"tier":"match","reason":"理由..."},...]
+[{"program_id":"实际的ID值（从列表中[ID:xxx]提取）","probability":75,"tier":"match","reason":"理由..."},...]
+
+重要：program_id 必须使用列表中 [ID:xxx] 里的完整 UUID 值，不要编造。
 
 匹配规则：
 - probability 为 0-100 的录取概率估计

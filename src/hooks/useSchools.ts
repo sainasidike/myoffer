@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { callEdgeFunction } from "@/lib/ai";
+import { callEdgeFunctionSSE } from "@/lib/ai";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Program = Tables<"programs">;
@@ -55,67 +55,41 @@ export function useSchools() {
         error: null,
       });
 
-      await callEdgeFunction(
+      await callEdgeFunctionSSE(
         "school-matching",
         { profile, filters },
-        {
-          onToken: () => {
-            // school-matching uses custom SSE format, not raw tokens
-          },
-          onDone: (fullText) => {
-            // Parse the structured events from the full text
-            try {
-              const lines = fullText.split("\n");
-              const thinkingSteps: string[] = [];
-              let results: MatchedSchool[] = [];
-
-              for (const line of lines) {
-                if (!line.startsWith("data: ")) continue;
-                const jsonStr = line.slice(6).trim();
-                if (jsonStr === "[DONE]") continue;
-
-                try {
-                  const event = JSON.parse(jsonStr);
-                  if (event.type === "thinking") {
-                    thinkingSteps.push(event.content);
-                  } else if (event.type === "result") {
-                    results = event.schools || [];
-                  } else if (event.type === "error") {
-                    setMatchState((prev) => ({
-                      ...prev,
-                      error: event.content,
-                      isMatching: false,
-                    }));
-                    return;
-                  }
-                } catch {
-                  // skip unparseable
-                }
-              }
-
-              setMatchState({
-                thinkingSteps,
-                results,
-                isMatching: false,
-                error: null,
-              });
-            } catch {
-              // If custom parsing fails, try to handle the raw stream
-              setMatchState((prev) => ({
-                ...prev,
-                isMatching: false,
-                error: "解析匹配结果失败",
-              }));
-            }
-          },
-          onError: (error) => {
+        (event) => {
+          if (event.type === "thinking") {
             setMatchState((prev) => ({
               ...prev,
-              isMatching: false,
-              error,
+              thinkingSteps: [...prev.thinkingSteps, event.content as string],
             }));
-          },
-        }
+          } else if (event.type === "result") {
+            setMatchState((prev) => ({
+              ...prev,
+              results: (event.schools as MatchedSchool[]) || [],
+            }));
+          } else if (event.type === "error") {
+            setMatchState((prev) => ({
+              ...prev,
+              error: event.content as string,
+              isMatching: false,
+            }));
+          }
+        },
+        (error) => {
+          setMatchState((prev) => ({
+            ...prev,
+            isMatching: false,
+            error,
+          }));
+        },
+        () => {
+          setMatchState((prev) => ({
+            ...prev,
+            isMatching: false,
+          }));
+        },
       );
     },
     []
