@@ -53,7 +53,11 @@ export function useProfile() {
     ];
     const filled = fields.filter((f) => {
       const val = profile[f as keyof Profile];
-      return val !== null && val !== undefined && val !== "";
+      if (val === null || val === undefined || val === "") return false;
+      if (typeof val === "string" && val.trim() === "") return false;
+      if (Array.isArray(val) && val.length === 0) return false;
+      if (typeof val === "object" && !Array.isArray(val) && Object.keys(val as object).length === 0) return false;
+      return true;
     });
     return Math.round((filled.length / fields.length) * 100);
   };

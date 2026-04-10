@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Paperclip,
   FileText,
@@ -9,37 +10,107 @@ import {
   Circle,
   Upload,
   X,
+  RotateCcw,
+  ChevronDown,
+  GraduationCap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { useOnboardingChat } from "@/hooks/useOnboardingChat";
 import { useProfile } from "@/hooks/useProfile";
+import ParseResultCard from "@/components/onboarding/ParseResultCard";
+import { renderMarkdown } from "@/lib/renderMarkdown";
 
-const profileFields = [
-  { key: "school", label: "学校 / 学历" },
-  { key: "major", label: "专业方向" },
-  { key: "gpa", label: "GPA / 均分" },
-  { key: "lang", label: "语言成绩" },
-  { key: "gre", label: "GRE / GMAT" },
-  { key: "intern", label: "实习 / 科研" },
-  { key: "country", label: "目标国家 / 预算" },
+// Map profile DB fields to display labels, check functions, and prompt hints
+const profileFieldChecks = [
+  {
+    label: "学校 / 学历",
+    check: (p: Record<string, unknown>) => !!(p.school && p.current_education),
+    prompt: "我还没填学校和学历信息，请帮我补充这部分。",
+  },
+  {
+    label: "专业方向",
+    check: (p: Record<string, unknown>) => !!p.major,
+    prompt: "我想补充我的专业方向信息。",
+  },
+  {
+    label: "GPA / 均分",
+    check: (p: Record<string, unknown>) => p.gpa !== null && p.gpa !== undefined && p.gpa !== "",
+    prompt: "我想补充我的GPA/均分信息。",
+  },
+  {
+    label: "语言成绩",
+    check: (p: Record<string, unknown>) => !!(p.language_type && p.language_score),
+    prompt: "我想补充我的语言考试成绩（雅思/托福等）。",
+  },
+  {
+    label: "GRE / GMAT",
+    check: (p: Record<string, unknown>) => {
+      const v = p.gre_gmat;
+      if (!v) return false;
+      if (typeof v === "object" && Object.keys(v as object).length === 0) return false;
+      return true;
+    },
+    prompt: "我想补充我的GRE/GMAT成绩。如果没考可以跳过。",
+  },
+  {
+    label: "实习 / 科研",
+    check: (p: Record<string, unknown>) => {
+      const intern = p.internship as unknown[] | null;
+      const research = p.research as unknown[] | null;
+      return (intern && intern.length > 0) || (research && research.length > 0);
+    },
+    prompt: "我想补充我的实习和科研经历。",
+  },
+  {
+    label: "目标国家 / 预算",
+    check: (p: Record<string, unknown>) => {
+      const country = p.target_country as unknown[] | null;
+      return (country && country.length > 0) || !!p.budget;
+    },
+    prompt: "我想补充我的目标留学国家和预算信息。",
+  },
 ];
 
 const ACCEPTED_TYPES = ".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp";
 
 export default function OnboardingChat() {
-  const { messages, isStreaming, isParsing, sendMessage, uploadFiles } =
+  const { messages, isStreaming, isParsing, isLoaded, parsedFileNames, sendMessage, uploadFiles, resetChat } =
     useOnboardingChat();
-  const { profileCompleteness } = useProfile();
+  const { profile, profileCompleteness } = useProfile();
   const [input, setInput] = useState("");
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
-  const [uploadedFileNames, setUploadedFileNames] = useState<string[]>([]);
+  const [mobileProfileOpen, setMobileProfileOpen] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const navigate = useNavigate();
 
   const completionPct = profileCompleteness();
   const isBusy = isStreaming || isParsing;
+  const profileData = (profile || {}) as Record<string, unknown>;
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -50,6 +121,10 @@ export default function OnboardingChat() {
     const text = input;
     setInput("");
     sendMessage(text);
+    // 检测"选校"关键词，档案完整度足够时自动跳转
+    if (text.includes("选校") && completionPct >= 60) {
+      setTimeout(() => navigate("/schools?auto=1"), 800);
+    }
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -57,7 +132,6 @@ export default function OnboardingChat() {
     if (!files) return;
     const newFiles = Array.from(files);
     setPendingFiles((prev) => [...prev, ...newFiles]);
-    // Reset input so same file can be selected again
     e.target.value = "";
   };
 
@@ -68,7 +142,6 @@ export default function OnboardingChat() {
   const handleUpload = async () => {
     if (pendingFiles.length === 0 || isBusy) return;
     const files = [...pendingFiles];
-    setUploadedFileNames((prev) => [...prev, ...files.map((f) => f.name)]);
     setPendingFiles([]);
     await uploadFiles(files);
   };
@@ -100,26 +173,119 @@ export default function OnboardingChat() {
             </div>
             <div className="flex-1">
               <div className="text-sm font-semibold text-foreground">
-                MyOffer AI 顾问
+                MyOffer AI 顾问 · 小M
               </div>
               <div className="text-xs text-muted-foreground">
                 {isParsing
                   ? "正在解析文档..."
                   : isStreaming
                   ? "正在回复..."
+                  : !isLoaded
+                  ? "加载中..."
                   : "正在收集你的申请信息"}
               </div>
             </div>
-            <div className="flex items-center gap-1.5">
-              <div
-                className={`w-2 h-2 rounded-full ${
-                  isBusy ? "bg-yellow-500 animate-pulse" : "bg-green-500"
-                }`}
-              />
-              <span className="text-xs text-muted-foreground">
-                {isBusy ? "处理中" : "在线"}
-              </span>
+            <div className="flex items-center gap-2">
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                    disabled={isBusy}
+                    aria-label="重新开始对话"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>重新开始对话？</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      这将清除所有聊天记录。已保存到档案中的信息不会丢失。
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>取消</AlertDialogCancel>
+                    <AlertDialogAction onClick={resetChat}>确认重置</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center gap-1.5 cursor-default">
+                      <div
+                        className={`w-2 h-2 rounded-full ${
+                          isBusy ? "bg-yellow-500 animate-pulse" : "bg-green-500"
+                        }`}
+                      />
+                      <span className="text-xs text-muted-foreground">
+                        {isBusy ? "处理中" : "在线"}
+                      </span>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{isBusy ? "AI 正在处理你的请求" : "AI 顾问已就绪，可以开始对话"}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
+          </div>
+
+          {/* Mobile profile summary */}
+          <div className="lg:hidden">
+            <Collapsible open={mobileProfileOpen} onOpenChange={setMobileProfileOpen}>
+              <CollapsibleTrigger asChild>
+                <button className="flex items-center justify-between w-full px-6 py-2 border-b border-border bg-card/50 text-sm hover:bg-accent/50 transition-colors">
+                  <span className="text-muted-foreground">档案完整度: <span className="font-semibold text-primary">{completionPct}%</span></span>
+                  <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${mobileProfileOpen ? "rotate-180" : ""}`} />
+                </button>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="px-6 py-3 border-b border-border bg-card/30 space-y-2">
+                  <div className="w-full h-1.5 rounded-full bg-muted overflow-hidden">
+                    <div className="h-full rounded-full bg-primary transition-all duration-500" style={{ width: `${completionPct}%` }} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {profileFieldChecks.map((f) => {
+                      const done = f.check(profileData);
+                      return (
+                        <div
+                          key={f.label}
+                          className={`flex items-center gap-1.5 text-xs ${
+                            !done ? "cursor-pointer hover:bg-accent/50 rounded px-1 py-0.5 transition-colors" : ""
+                          }`}
+                          onClick={() => {
+                            if (!done && !isBusy) {
+                              setMobileProfileOpen(false);
+                              sendMessage(f.prompt);
+                            }
+                          }}
+                        >
+                          {done ? (
+                            <CheckCircle2 className="w-3 h-3 text-green-500 shrink-0" />
+                          ) : (
+                            <Circle className="w-3 h-3 text-muted-foreground/30 shrink-0" />
+                          )}
+                          <span className={done ? "text-foreground" : "text-muted-foreground"}>{f.label}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {completionPct >= 60 && (
+                    <Button
+                      className="w-full mt-2"
+                      size="sm"
+                      onClick={() => navigate("/schools?auto=1")}
+                    >
+                      <GraduationCap className="w-3.5 h-3.5 mr-1.5" />
+                      开始 AI 智能选校
+                    </Button>
+                  )}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
           </div>
 
           {/* Messages */}
@@ -128,51 +294,86 @@ export default function OnboardingChat() {
             onDrop={handleDrop}
             onDragOver={handleDragOver}
           >
-            {messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={`flex gap-3 animate-message-in ${
-                  msg.role === "user" ? "justify-end" : "justify-start"
-                }`}
-              >
-                {msg.role === "ai" && (
-                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-1">
-                    <Bot className="w-4 h-4 text-primary" />
+            {!isLoaded && (
+              <div className="flex justify-center py-10">
+                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+              </div>
+            )}
+
+            {messages.map((msg) => {
+              // Document parse result — special card
+              if (msg.type === "parse-result" && msg.role === "ai") {
+                return (
+                  <div key={msg.id} className="flex gap-3 justify-start animate-message-in">
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-1">
+                      <Bot className="w-4 h-4 text-primary" />
+                    </div>
+                    {msg.content ? (
+                      <ParseResultCard
+                        content={msg.content}
+                        fileName={msg.fileName || "文件"}
+                      />
+                    ) : (
+                      <div className="max-w-[70%] rounded-2xl px-4 py-3 text-sm bg-card text-foreground border border-border rounded-bl-md shadow-sm">
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>正在解析 {msg.fileName || "文件"}...</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
+                );
+              }
+
+              // Regular message
+              return (
                 <div
-                  className={`max-w-[70%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
-                    msg.role === "user"
-                      ? "bg-primary text-primary-foreground rounded-br-md"
-                      : "bg-card text-foreground border border-border rounded-bl-md shadow-sm"
+                  key={msg.id}
+                  className={`flex gap-3 animate-message-in ${
+                    msg.role === "user" ? "justify-end" : "justify-start"
                   }`}
                 >
-                  {msg.content || (
-                    <div className="flex gap-1">
-                      <div
-                        className="w-2 h-2 rounded-full bg-muted-foreground/40 animate-bounce"
-                        style={{ animationDelay: "0ms" }}
-                      />
-                      <div
-                        className="w-2 h-2 rounded-full bg-muted-foreground/40 animate-bounce"
-                        style={{ animationDelay: "150ms" }}
-                      />
-                      <div
-                        className="w-2 h-2 rounded-full bg-muted-foreground/40 animate-bounce"
-                        style={{ animationDelay: "300ms" }}
-                      />
+                  {msg.role === "ai" && (
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-1">
+                      <Bot className="w-4 h-4 text-primary" />
+                    </div>
+                  )}
+                  <div
+                    className={`max-w-[70%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+                      msg.role === "user"
+                        ? "bg-primary text-primary-foreground rounded-br-md whitespace-pre-wrap"
+                        : "bg-card text-foreground border border-border rounded-bl-md shadow-sm"
+                    }`}
+                  >
+                    {msg.content ? (
+                      msg.role === "ai" ? renderMarkdown(msg.content) : msg.content
+                    ) : (
+                      <div className="flex gap-1">
+                        <div
+                          className="w-2 h-2 rounded-full bg-muted-foreground/40 animate-bounce"
+                          style={{ animationDelay: "0ms" }}
+                        />
+                        <div
+                          className="w-2 h-2 rounded-full bg-muted-foreground/40 animate-bounce"
+                          style={{ animationDelay: "150ms" }}
+                        />
+                        <div
+                          className="w-2 h-2 rounded-full bg-muted-foreground/40 animate-bounce"
+                          style={{ animationDelay: "300ms" }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                  {msg.role === "user" && (
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-1">
+                      <span className="text-xs font-semibold text-primary">
+                        我
+                      </span>
                     </div>
                   )}
                 </div>
-                {msg.role === "user" && (
-                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-1">
-                    <span className="text-xs font-semibold text-primary">
-                      我
-                    </span>
-                  </div>
-                )}
-              </div>
-            ))}
+              );
+            })}
 
             <div ref={chatEndRef} />
           </div>
@@ -237,6 +438,7 @@ export default function OnboardingChat() {
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isBusy}
                 title="上传文件（PDF、Word、图片）"
+                aria-label="上传文件"
               >
                 <Paperclip className="w-5 h-5" />
               </Button>
@@ -256,6 +458,7 @@ export default function OnboardingChat() {
                 size="icon"
                 onClick={handleSend}
                 disabled={!input.trim() || isBusy}
+                aria-label="发送消息"
               >
                 {isStreaming ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -287,12 +490,20 @@ export default function OnboardingChat() {
               />
             </div>
             <div className="space-y-2.5 pt-1">
-              {profileFields.map((f) => {
-                const done = completionPct > 0;
+              {profileFieldChecks.map((f) => {
+                const done = f.check(profileData);
                 return (
                   <div
-                    key={f.key}
-                    className="flex items-center gap-2.5 text-sm"
+                    key={f.label}
+                    className={`flex items-center gap-2.5 text-sm ${
+                      !done ? "cursor-pointer hover:bg-accent/50 -mx-1 px-1 py-0.5 rounded transition-colors" : ""
+                    }`}
+                    onClick={() => {
+                      if (!done && !isBusy) {
+                        sendMessage(f.prompt);
+                      }
+                    }}
+                    title={!done ? `点击补充${f.label}` : undefined}
                   >
                     {done ? (
                       <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
@@ -306,20 +517,34 @@ export default function OnboardingChat() {
                     >
                       {f.label}
                     </span>
+                    {!done && (
+                      <span className="ml-auto text-xs text-primary opacity-0 group-hover:opacity-100">补充</span>
+                    )}
                   </div>
                 );
               })}
             </div>
           </div>
 
+          {/* Start school matching CTA */}
+          {completionPct >= 60 && (
+            <Button
+              className="w-full"
+              onClick={() => navigate("/schools?auto=1")}
+            >
+              <GraduationCap className="w-4 h-4 mr-2" />
+              开始 AI 智能选校
+            </Button>
+          )}
+
           {/* Uploaded materials */}
           <div className="rounded-xl border border-border p-4 space-y-3">
             <div className="text-sm font-semibold text-foreground">
               已解析材料
             </div>
-            {uploadedFileNames.length > 0 ? (
+            {parsedFileNames.length > 0 ? (
               <div className="space-y-2">
-                {uploadedFileNames.map((name, i) => (
+                {parsedFileNames.map((name, i) => (
                   <div
                     key={i}
                     className="text-xs text-foreground bg-muted rounded-lg px-3 py-2 truncate flex items-center gap-2"

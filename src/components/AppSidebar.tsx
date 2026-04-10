@@ -9,6 +9,17 @@ import {
   LogOut,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const navItems = [
   { title: "AI助手", path: "/onboarding", icon: ClipboardList, status: "active" },
@@ -76,13 +87,29 @@ export function AppSidebar({ onNavigate }: { onNavigate?: () => void } = {}) {
               {profile?.user_display_id ?? ""}
             </div>
           </div>
-          <button
-            onClick={signOut}
-            className="text-muted-foreground hover:text-destructive transition-colors"
-            title="退出登录"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <button
+                className="text-muted-foreground hover:text-destructive transition-colors"
+                title="退出登录"
+                aria-label="退出登录"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>确认退出登录？</AlertDialogTitle>
+                <AlertDialogDescription>
+                  退出后需要重新登录才能使用。
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>取消</AlertDialogCancel>
+                <AlertDialogAction onClick={signOut}>确认退出</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
     </aside>

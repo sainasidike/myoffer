@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Send, Copy, Save, Plus, Loader2, FileText, Bot } from "lucide-react";
+import { Send, Copy, Save, Plus, Loader2, FileText, Bot, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
@@ -16,9 +16,12 @@ const essayTypes = [
 ];
 
 export default function EssayWriting() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const appId = searchParams.get("app") || undefined;
   const essayType = searchParams.get("type") || "sop";
+  const materialId = searchParams.get("materialId") || undefined;
+  const titleFromUrl = searchParams.get("title") || undefined;
+  const essayIdFromUrl = searchParams.get("essayId") || undefined;
 
   const {
     essays,
@@ -36,12 +39,81 @@ export default function EssayWriting() {
   const [input, setInput] = useState("");
   const [essayContent, setEssayContent] = useState("");
   const [selectedEssayId, setSelectedEssayId] = useState<string | null>(null);
+  const [autoCreated, setAutoCreated] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const targetWords = 800;
+
+  // Auto-load existing essay if essayId is in URL
+  useEffect(() => {
+    if (essayIdFromUrl && !autoCreated) {
+      setSelectedEssayId(essayIdFromUrl);
+      loadConversation(essayIdFromUrl);
+      setAutoCreated(true);
+      // Clear the URL param
+      setSearchParams({}, { replace: true });
+    }
+  }, [essayIdFromUrl, autoCreated]);
+
+  // Auto-select the most recent essay when entering the page with no URL params
+  useEffect(() => {
+    if (!essayIdFromUrl && !appId && !selectedEssayId && essays.length > 0 && !autoCreated) {
+      const latest = essays[0]; // already sorted by updated_at desc
+      setSelectedEssayId(latest.id);
+      loadConversation(latest.id);
+    }
+  }, [essays, essayIdFromUrl, appId, selectedEssayId, autoCreated]);
+
+  // Auto-create essay if coming from material checklist (has app + type + materialId but no essayId)
+  useEffect(() => {
+    if (appId && materialId && !essayIdFromUrl && !autoCreated) {
+      setAutoCreated(true);
+      const title = titleFromUrl || essayTypes.find((t) => t.key === essayType)?.label || essayType;
+      const savedAppId = appId;
+      const savedEssayType = essayType;
+      createEssay({
+        application_id: savedAppId,
+        essay_type: savedEssayType,
+        title,
+        material_id: materialId,
+      }).then((essay) => {
+        setSelectedEssayId(essay.id);
+        setSearchParams({}, { replace: true });
+        // Auto-trigger AI to generate the first draft immediately
+        const typeName = essayTypes.find((t) => t.key === savedEssayType)?.label || savedEssayType;
+        sendMessage(
+          `请根据我的背景信息，为这个项目直接撰写一篇${typeName}初稿。`,
+          essay.id,
+          savedAppId,
+          savedEssayType,
+          ""
+        );
+      }).catch((err) => {
+        toast({
+          title: "创建文书失败",
+          description: err instanceof Error ? err.message : "未知错误",
+          variant: "destructive",
+        });
+      });
+    }
+  }, [appId, materialId, essayIdFromUrl, autoCreated]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages]);
+
+  // Auto-apply first AI response to editor (when AI finishes first generation)
+  const prevStreamingRef = useRef(false);
+  useEffect(() => {
+    // Detect streaming just ended (was streaming, now not)
+    if (prevStreamingRef.current && !isStreaming) {
+      const assistantMsgs = chatMessages.filter((m) => m.role === "assistant");
+      // Only auto-apply for the very first assistant message (initial generation)
+      if (assistantMsgs.length === 1 && assistantMsgs[0].content.length > 200 && !essayContent) {
+        handleApplyFromChat(assistantMsgs[0].content);
+      }
+    }
+    prevStreamingRef.current = isStreaming;
+  }, [isStreaming, chatMessages, essayContent]);
 
   const wordCount = essayContent
     .trim()
@@ -56,6 +128,43 @@ export default function EssayWriting() {
       }
     }
   }, [selectedEssayId, essays]);
+
+  // Auto-save: save current essay before switching or leaving
+  const savedContentRef = useRef("");
+  const autoSave = useCallback(() => {
+    if (selectedEssayId && essayContent && essayContent !== savedContentRef.current) {
+      saveEssay({ id: selectedEssayId, content: essayContent });
+      savedContentRef.current = essayContent;
+    }
+  }, [selectedEssayId, essayContent, saveEssay]);
+
+  // Track the last saved content to avoid redundant saves
+  useEffect(() => {
+    if (selectedEssayId) {
+      const essay = essays.find((e) => e.id === selectedEssayId);
+      savedContentRef.current = essay?.content || "";
+    }
+  }, [selectedEssayId, essays]);
+
+  // Debounced auto-save: save 3 seconds after user stops typing
+  useEffect(() => {
+    if (!selectedEssayId || !essayContent || essayContent === savedContentRef.current) return;
+    const timer = setTimeout(() => {
+      autoSave();
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [essayContent, selectedEssayId, autoSave]);
+
+  // Save when navigating away (beforeunload)
+  useEffect(() => {
+    const handleBeforeUnload = () => autoSave();
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      // Also save on unmount (page navigation within SPA)
+      autoSave();
+    };
+  }, [autoSave]);
 
   const handleNewEssay = async () => {
     try {
@@ -114,13 +223,23 @@ export default function EssayWriting() {
     if (essayMatch) {
       setEssayContent(essayMatch[1].trim());
       toast({ title: "已应用到编辑器" });
+      return;
+    }
+    // Fallback: apply the full response if it's long enough
+    if (content.length > 300) {
+      setEssayContent(content.trim());
+      toast({ title: "已应用到编辑器" });
     }
   };
 
+  const currentEssayTitle = selectedEssayId
+    ? essays.find((e) => e.id === selectedEssayId)?.title || "文书编辑"
+    : "文书编辑";
+
   return (
-    <div className="flex h-screen">
-      {/* Left: Chat Panel (40%) */}
-      <div className="w-[40%] flex flex-col border-r border-border">
+    <div className="flex flex-col md:flex-row h-screen">
+      {/* Left: Chat Panel */}
+      <div className="w-full md:w-[40%] flex flex-col border-r border-border">
         {/* Header with essay list */}
         <div className="px-4 py-3 border-b border-border bg-card space-y-2">
           <div className="flex items-center justify-between">
@@ -135,13 +254,14 @@ export default function EssayWriting() {
           </div>
           {essays.length > 0 && (
             <div className="flex gap-1 overflow-x-auto pb-1">
-              {essays.slice(0, 5).map((e) => (
+              {essays.slice(0, 8).map((e) => (
                 <Button
                   key={e.id}
                   size="sm"
                   variant={selectedEssayId === e.id ? "default" : "ghost"}
                   className="text-xs shrink-0 h-7"
                   onClick={() => {
+                    autoSave(); // save current before switching
                     setSelectedEssayId(e.id);
                     loadConversation(e.id);
                   }}
@@ -242,6 +362,7 @@ export default function EssayWriting() {
               size="icon"
               onClick={handleSend}
               disabled={!input.trim() || !selectedEssayId || isStreaming}
+              aria-label="发送消息"
             >
               {isStreaming ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -256,11 +377,7 @@ export default function EssayWriting() {
       {/* Right: Editor Panel (60%) */}
       <div className="flex-1 flex flex-col">
         <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-card">
-          <h2 className="font-semibold text-sm">
-            {selectedEssayId
-              ? essays.find((e) => e.id === selectedEssayId)?.title || "文书编辑"
-              : "文书编辑"}
-          </h2>
+          <h2 className="font-semibold text-sm truncate">{currentEssayTitle}</h2>
           <div className="flex items-center gap-1">
             <Button
               variant="ghost"
@@ -279,10 +396,12 @@ export default function EssayWriting() {
             >
               {isSaving ? (
                 <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+              ) : essayContent && essayContent === savedContentRef.current ? (
+                <Check className="w-4 h-4 mr-1 text-green-500" />
               ) : (
                 <Save className="w-4 h-4 mr-1" />
               )}
-              保存
+              {essayContent && essayContent === savedContentRef.current ? "已保存" : "保存"}
             </Button>
           </div>
         </div>

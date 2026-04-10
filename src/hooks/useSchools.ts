@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { callEdgeFunctionSSE } from "@/lib/ai";
@@ -11,20 +11,45 @@ export interface MatchedSchool {
   probability: number;
   tier: "reach" | "match" | "safety";
   reason: string;
+  risk_flags: string[];
+  advantage_tags: string[];
+  weakness_tags: string[];
+  improvement_tips: string[];
   program: Program | null;
 }
 
 interface SchoolMatchingState {
   thinkingSteps: string[];
   results: MatchedSchool[];
+  competitiveness: number;
   isMatching: boolean;
   error: string | null;
 }
 
+const CACHE_KEY = "myoffer_match_results";
+
+function loadCachedResults(): { results: MatchedSchool[]; competitiveness: number } | null {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed?.results?.length > 0) return parsed;
+  } catch { /* ignore */ }
+  return null;
+}
+
+function saveCachedResults(results: MatchedSchool[], competitiveness: number) {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ results, competitiveness }));
+  } catch { /* ignore */ }
+}
+
 export function useSchools() {
+  const cached = loadCachedResults();
   const [matchState, setMatchState] = useState<SchoolMatchingState>({
     thinkingSteps: [],
-    results: [],
+    results: cached?.results || [],
+    competitiveness: cached?.competitiveness || 0,
     isMatching: false,
     error: null,
   });
@@ -65,9 +90,13 @@ export function useSchools() {
               thinkingSteps: [...prev.thinkingSteps, event.content as string],
             }));
           } else if (event.type === "result") {
+            const results = (event.schools as MatchedSchool[]) || [];
+            const competitiveness = (event.competitiveness as number) || 0;
+            saveCachedResults(results, competitiveness);
             setMatchState((prev) => ({
               ...prev,
-              results: (event.schools as MatchedSchool[]) || [],
+              results,
+              competitiveness,
             }));
           } else if (event.type === "error") {
             setMatchState((prev) => ({

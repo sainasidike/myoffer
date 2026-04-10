@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
+import type { Tables, TablesUpdate } from "@/integrations/supabase/types";
 
 type Application = Tables<"applications">;
 type ApplicationMaterial = Tables<"application_materials">;
@@ -27,7 +27,6 @@ export function useApplications() {
 
       if (error) throw error;
 
-      // Fetch materials for all applications
       const appIds = (apps || []).map((a) => a.id);
       const { data: materials } = appIds.length > 0
         ? await supabase
@@ -96,6 +95,85 @@ export function useApplications() {
     },
   });
 
+  // Upload file to Supabase Storage and update material's file_url
+  const uploadMaterialFile = useMutation({
+    mutationFn: async ({
+      materialId,
+      file,
+    }: {
+      materialId: string;
+      file: File;
+    }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("未登录");
+
+      const ext = file.name.split(".").pop() || "pdf";
+      const path = `${user.id}/materials/${materialId}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("user-documents")
+        .upload(path, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      // Save the storage path to material
+      const { error: updateError } = await supabase
+        .from("application_materials")
+        .update({
+          file_url: path,
+          status: "submitted",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", materialId);
+
+      if (updateError) throw updateError;
+      return path;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["applications"] });
+    },
+  });
+
+  // Get a temporary signed URL for viewing a file
+  const getFileUrl = async (storagePath: string): Promise<string> => {
+    const { data, error } = await supabase.storage
+      .from("user-documents")
+      .createSignedUrl(storagePath, 3600);
+    if (error) throw error;
+    return data.signedUrl;
+  };
+
+  // Download all materials as individual files (browser triggers downloads)
+  const downloadAllMaterials = async (app: ApplicationWithDetails) => {
+    const materialsWithFiles = app.materials.filter((m) => m.file_url || m.essay_id);
+
+    for (const mat of materialsWithFiles) {
+      if (mat.file_url) {
+        const url = await getFileUrl(mat.file_url);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${mat.material_name}.${mat.file_url.split(".").pop()}`;
+        a.click();
+      } else if (mat.essay_id) {
+        // Download essay content as txt
+        const { data: essay } = await supabase
+          .from("essays")
+          .select("content, title")
+          .eq("id", mat.essay_id)
+          .single();
+        if (essay?.content) {
+          const blob = new Blob([essay.content], { type: "text/plain" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `${essay.title || mat.material_name}.txt`;
+          a.click();
+          URL.revokeObjectURL(url);
+        }
+      }
+    }
+  };
+
   // Stats
   const stats = {
     total: applications?.length || 0,
@@ -105,7 +183,6 @@ export function useApplications() {
     rejected: applications?.filter((a) => a.status === "rejected").length || 0,
   };
 
-  // Upcoming deadlines (within 7 days)
   const urgentApps = (applications || []).filter((a) => {
     if (!a.deadline) return false;
     const days = Math.ceil(
@@ -120,6 +197,10 @@ export function useApplications() {
     updateApplication: updateApplication.mutate,
     updateMaterial: updateMaterial.mutate,
     deleteApplication: deleteApplication.mutate,
+    uploadMaterialFile: uploadMaterialFile.mutateAsync,
+    isUploading: uploadMaterialFile.isPending,
+    getFileUrl,
+    downloadAllMaterials,
     stats,
     urgentApps,
   };

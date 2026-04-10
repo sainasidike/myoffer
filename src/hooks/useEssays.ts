@@ -36,12 +36,13 @@ export function useEssays() {
     },
   });
 
-  // Create essay
+  // Create essay — optionally link to a material
   const createEssay = useMutation({
     mutationFn: async (input: {
       application_id?: string;
       essay_type: string;
       title: string;
+      material_id?: string; // link essay back to material
     }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("未登录");
@@ -60,12 +61,22 @@ export function useEssays() {
         .single();
 
       if (error) throw error;
+
+      // Link essay_id back to the material so "去撰写" becomes "去修改"
+      if (input.material_id) {
+        await supabase
+          .from("application_materials")
+          .update({ essay_id: data.id, status: "in_progress", updated_at: new Date().toISOString() })
+          .eq("id", input.material_id);
+      }
+
       return data;
     },
     onSuccess: (data) => {
       setCurrentEssayId(data.id);
       setChatMessages([]);
       queryClient.invalidateQueries({ queryKey: ["essays"] });
+      queryClient.invalidateQueries({ queryKey: ["applications"] });
     },
   });
 

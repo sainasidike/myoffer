@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,17 +16,43 @@ import {
   RefreshCw,
   Plus,
   Check,
+  Star,
+  Clock,
+  AlertTriangle,
+  BookOpen,
+  GraduationCap,
+  Lightbulb,
 } from "lucide-react";
 import { useSchools, type MatchedSchool } from "@/hooks/useSchools";
 import { useProfile } from "@/hooks/useProfile";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 
 const categories = [
-  { title: "冲刺校", range: "<40%", color: "warning", filter: (p: number) => p < 40 },
-  { title: "匹配校", range: "40-70%", color: "info", filter: (p: number) => p >= 40 && p < 70 },
-  { title: "保底校", range: "70%+", color: "purple", filter: (p: number) => p >= 70 },
-] as const;
+  { title: "冲刺校", range: "录取概率较低", color: "warning", tier: "reach" as const },
+  { title: "匹配校", range: "录取概率适中", color: "info", tier: "match" as const },
+  { title: "保底校", range: "录取概率较高", color: "purple", tier: "safety" as const },
+];
+
+function PrestigeStars({ count }: { count: number }) {
+  return (
+    <span className="inline-flex gap-0.5">
+      {Array.from({ length: count }).map((_, i) => (
+        <Star key={i} className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+      ))}
+    </span>
+  );
+}
+
+function isDeadlineSoon(deadline: unknown): boolean {
+  if (!deadline || typeof deadline !== "object") return false;
+  const dates = Object.values(deadline as Record<string, string>);
+  const fourWeeks = Date.now() + 28 * 24 * 60 * 60 * 1000;
+  return dates.some((d) => {
+    const t = new Date(d).getTime();
+    return t > Date.now() && t < fourWeeks;
+  });
+}
 
 function SchoolCard({
   school,
@@ -48,25 +74,51 @@ function SchoolCard({
       ? "text-blue-500"
       : "text-green-500";
 
-  const tags = (prog.tags || []) as string[];
+  const tierLabel =
+    school.tier === "reach" ? "冲刺" : school.tier === "match" ? "匹配" : "保底";
+  const tierBg =
+    school.tier === "reach"
+      ? "bg-orange-100 text-orange-700"
+      : school.tier === "match"
+      ? "bg-blue-100 text-blue-700"
+      : "bg-green-100 text-green-700";
+
+  const deadlineSoon = isDeadlineSoon(prog.deadline);
+  const prestige = (prog as Record<string, unknown>).prestige as number || 3;
+  const programType = (prog as Record<string, unknown>).program_type as string || "授课型";
+  const requireLang = (prog as Record<string, unknown>).require_lang as Record<string, number> | null;
+  const scholarship = (prog as Record<string, unknown>).scholarship as string[] | null;
+  const notes = (prog as Record<string, unknown>).notes as string | null;
 
   return (
     <Card className="transition-shadow hover:shadow-md">
       <CardContent className="p-4 space-y-3">
+        {/* Level 1: School + Program + Probability */}
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-sm truncate">
-              {prog.university_name_cn || prog.university_name}
-            </h3>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="font-semibold text-sm truncate">
+                {prog.university_name_cn || prog.university_name}
+              </h3>
+              <PrestigeStars count={prestige} />
+            </div>
             <p className="text-xs text-muted-foreground mt-0.5 truncate">
               {prog.program_name_cn || prog.program_name}
             </p>
           </div>
-          <span className={`text-lg font-bold ${probColor} ml-2 shrink-0`}>
-            {school.probability}%
-          </span>
+          <div className="ml-2 shrink-0 text-right">
+            <span className={`text-lg font-bold ${probColor}`}>
+              {school.probability}%
+            </span>
+            <div>
+              <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${tierBg}`}>
+                {tierLabel}
+              </span>
+            </div>
+          </div>
         </div>
 
+        {/* Level 2: Quick stats */}
         <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
           <span className="flex items-center gap-1">
             <MapPin className="w-3 h-3" />
@@ -78,32 +130,63 @@ function SchoolCard({
               QS #{prog.qs_ranking}
             </span>
           )}
-          {prog.tuition && (
+          <span className="flex items-center gap-1">
+            <BookOpen className="w-3 h-3" />
+            {prog.duration} · {programType}
+          </span>
+          {requireLang && (
             <span className="flex items-center gap-1">
-              <DollarSign className="w-3 h-3" />
-              {prog.tuition}
+              {requireLang.ielts_min && `雅思${requireLang.ielts_min}`}
+              {requireLang.ielts_min && requireLang.toefl_min && " / "}
+              {requireLang.toefl_min && `托福${requireLang.toefl_min}`}
             </span>
           )}
         </div>
 
+        {/* Deadline warning */}
+        {deadlineSoon && (
+          <div className="flex items-center gap-1.5 text-xs text-red-500 font-medium">
+            <Clock className="w-3 h-3" />
+            时间紧张 — 截止日期不足4周
+          </div>
+        )}
+
+        {/* Risk flags */}
+        {school.risk_flags && school.risk_flags.length > 0 && (
+          <div className="flex items-start gap-1.5 text-xs text-amber-600">
+            <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />
+            <span>{school.risk_flags.join("；")}</span>
+          </div>
+        )}
+
+        {/* Level 3: AI personalized analysis */}
         {school.reason && (
-          <p className="text-xs text-muted-foreground leading-relaxed">
+          <p className="text-xs text-foreground/80 leading-relaxed bg-muted/50 rounded-lg px-3 py-2">
             {school.reason}
           </p>
         )}
 
+        {/* Level 4: Tags */}
         <div className="flex flex-wrap gap-1">
-          {tags.slice(0, 4).map((t) => (
-            <Badge
-              key={t}
-              variant="secondary"
-              className="text-xs"
-            >
+          {(school.advantage_tags || []).map((t) => (
+            <Badge key={t} className="text-[10px] bg-green-50 text-green-700 border-green-200 hover:bg-green-50">
+              {t}
+            </Badge>
+          ))}
+          {(school.weakness_tags || []).map((t) => (
+            <Badge key={t} className="text-[10px] bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-50">
+              {t}
+            </Badge>
+          ))}
+          {(school.improvement_tips || []).map((t) => (
+            <Badge key={t} className="text-[10px] bg-cyan-50 text-cyan-700 border-cyan-200 hover:bg-cyan-50">
+              <Lightbulb className="w-2.5 h-2.5 mr-0.5" />
               {t}
             </Badge>
           ))}
         </div>
 
+        {/* Expand toggle */}
         <Button
           variant="ghost"
           size="sm"
@@ -118,13 +201,26 @@ function SchoolCard({
           {expanded ? "收起详情" : "展开详情"}
         </Button>
 
+        {/* Expanded details */}
         {expanded && (
           <div className="space-y-3 pt-2 border-t border-border animate-in fade-in">
-            <div className="text-xs space-y-1">
-              {prog.duration && (
+            <div className="text-xs space-y-1.5">
+              {prog.tuition && (
                 <p>
-                  <span className="text-muted-foreground">学制：</span>
-                  {prog.duration}
+                  <span className="text-muted-foreground">学费：</span>
+                  {prog.tuition}
+                </p>
+              )}
+              {(prog as Record<string, unknown>).living_cost && (
+                <p>
+                  <span className="text-muted-foreground">生活费：</span>
+                  {(prog as Record<string, unknown>).living_cost as string}
+                </p>
+              )}
+              {prog.gpa_requirement && (
+                <p>
+                  <span className="text-muted-foreground">GPA 要求：</span>
+                  {prog.gpa_requirement}
                 </p>
               )}
               {prog.deadline && (
@@ -135,22 +231,24 @@ function SchoolCard({
                     .join("、")}
                 </p>
               )}
-              {prog.gpa_requirement && (
-                <p>
-                  <span className="text-muted-foreground">GPA 要求：</span>
-                  {prog.gpa_requirement}
-                </p>
-              )}
               {prog.required_materials && (
                 <p>
                   <span className="text-muted-foreground">所需材料：</span>
                   {(prog.required_materials as string[]).join("、")}
                 </p>
               )}
-              {prog.description && (
+              {scholarship && scholarship.length > 0 && (
                 <p>
-                  <span className="text-muted-foreground">简介：</span>
-                  {prog.description}
+                  <span className="text-muted-foreground">奖学金：</span>
+                  {scholarship.map((s: string | { name?: string; amount?: string }) =>
+                    typeof s === "string" ? s : `${s.name || ""}${s.amount ? `(${s.amount})` : ""}`
+                  ).join("、")}
+                </p>
+              )}
+              {notes && (
+                <p>
+                  <span className="text-muted-foreground">备注：</span>
+                  {notes}
                 </p>
               )}
             </div>
@@ -198,10 +296,12 @@ function SchoolCard({
 
 export default function SchoolMatching() {
   const { matchState, startMatching, addToApplications, stats } = useSchools();
-  const { profile } = useProfile();
+  const { profile, profileCompleteness } = useProfile();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
 
+  const completionPct = profileCompleteness();
   const hasResults = matchState.results.length > 0;
   const avgProb = hasResults
     ? Math.round(
@@ -209,6 +309,17 @@ export default function SchoolMatching() {
           matchState.results.length
       )
     : 0;
+
+  // Auto-trigger from onboarding
+  useEffect(() => {
+    if (searchParams.get("auto") === "1" && profile && !matchState.isMatching) {
+      setSearchParams({}, { replace: true });
+      startMatching(profile as unknown as Record<string, unknown>, {
+        countries: (profile.target_country as string[]) || undefined,
+        degree: profile.target_degree || undefined,
+      });
+    }
+  }, [searchParams, profile, matchState.isMatching]);
 
   const handleStartMatching = () => {
     if (!profile) {
@@ -248,8 +359,19 @@ export default function SchoolMatching() {
               <TrendingUp className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">匹配项目数</p>
-              <p className="text-2xl font-bold">{stats.total}</p>
+              <p className="text-xs text-muted-foreground">
+                {matchState.competitiveness > 0 ? "综合竞争力" : "匹配项目数"}
+              </p>
+              <p className="text-2xl font-bold">
+                {matchState.competitiveness > 0
+                  ? `${matchState.competitiveness}分`
+                  : stats.total}
+              </p>
+              {matchState.competitiveness > 0 && (
+                <p className="text-[10px] text-muted-foreground">
+                  共匹配 {stats.total} 个项目
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -279,23 +401,46 @@ export default function SchoolMatching() {
         </Card>
       </div>
 
+      {/* Low completeness warning */}
+      {completionPct < 60 && hasResults && (
+        <Card className="border-amber-200 bg-amber-50/50">
+          <CardContent className="p-4 flex items-center gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
+            <div className="text-sm">
+              <span className="font-medium text-amber-700">档案完整度不足 60%</span>
+              <span className="text-amber-600 ml-1">— 概率仅供参考，完善档案可获得更精准的匹配结果</span>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="shrink-0 ml-auto border-amber-300 text-amber-700 hover:bg-amber-100"
+              onClick={() => navigate("/onboarding")}
+            >
+              去完善
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Action buttons */}
-      <div className="flex gap-3">
-        <Button onClick={handleStartMatching} disabled={matchState.isMatching}>
-          {matchState.isMatching ? (
-            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-          ) : (
-            <RefreshCw className="w-4 h-4 mr-2" />
-          )}
-          {hasResults ? "重新匹配" : "开始 AI 智能选校"}
-        </Button>
-        <Button
-          variant="outline"
-          onClick={() => navigate("/onboarding")}
-        >
-          返回修改信息
-        </Button>
-      </div>
+      {(hasResults || matchState.isMatching || matchState.error) && (
+        <div className="flex gap-3">
+          <Button onClick={handleStartMatching} disabled={matchState.isMatching}>
+            {matchState.isMatching ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <RefreshCw className="w-4 h-4 mr-2" />
+            )}
+            {hasResults ? "重新匹配" : "开始 AI 智能选校"}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => navigate("/onboarding")}
+          >
+            返回修改信息
+          </Button>
+        </div>
+      )}
 
       {/* Thinking steps */}
       {matchState.isMatching && (
@@ -317,8 +462,16 @@ export default function SchoolMatching() {
       {/* Error */}
       {matchState.error && (
         <Card className="border-destructive">
-          <CardContent className="p-4 text-sm text-destructive">
-            {matchState.error}
+          <CardContent className="p-4 space-y-3">
+            <p className="text-sm text-destructive">{matchState.error}</p>
+            <div className="text-xs text-muted-foreground space-y-1">
+              <p>建议尝试：</p>
+              <ul className="list-disc pl-4 space-y-0.5">
+                <li>增加目标国家（如同时选择英国和澳洲）</li>
+                <li>放宽 QS 排名要求</li>
+                <li>确认档案中的 GPA 和语言成绩已填写</li>
+              </ul>
+            </div>
           </CardContent>
         </Card>
       )}
@@ -327,10 +480,10 @@ export default function SchoolMatching() {
       {!hasResults && !matchState.isMatching && !matchState.error && (
         <Card>
           <CardContent className="p-12 text-center">
-            <Target className="w-12 h-12 mx-auto text-muted-foreground/30 mb-4" />
+            <GraduationCap className="w-12 h-12 mx-auto text-muted-foreground/30 mb-4" />
             <h3 className="text-lg font-semibold mb-2">准备好开始选校了吗？</h3>
             <p className="text-sm text-muted-foreground mb-6">
-              AI 将根据你的背景，从 50+ 项目中匹配最适合你的学校
+              AI 将根据你的背景，从 50+ 项目中精准匹配最适合你的学校
             </p>
             <Button onClick={handleStartMatching}>
               开始 AI 智能选校
@@ -344,7 +497,7 @@ export default function SchoolMatching() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {categories.map((cat) => {
             const schools = matchState.results.filter((s) =>
-              cat.filter(s.probability)
+              s.tier === cat.tier
             );
             const headerColor =
               cat.color === "warning"

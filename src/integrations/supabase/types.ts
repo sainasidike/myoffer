@@ -1,3 +1,4 @@
+Initialising login role...
 export type Json =
   | string
   | number
@@ -136,6 +137,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      chat_messages: {
+        Row: {
+          content: string
+          created_at: string | null
+          id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          id?: string
+          role: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       essay_conversations: {
         Row: {
@@ -369,6 +394,174 @@ export type Database = {
         }
         Relationships: []
       }
+      school_programs: {
+        Row: {
+          accept_list: string | null
+          application_materials: string | null
+          avg_score: number | null
+          country: string
+          created_at: string
+          deadline: string | null
+          degree: string
+          duration: string | null
+          field: string
+          id: string
+          link: string | null
+          living_cost: string | null
+          notes: string | null
+          prestige: number | null
+          program: string
+          qs_ranking: number | null
+          require_gpa: string | null
+          require_lang: string | null
+          rolling_admission: boolean | null
+          scholarship: string | null
+          school: string
+          tuition: string | null
+          type: string | null
+          updated_at: string
+        }
+        Insert: {
+          accept_list?: string | null
+          application_materials?: string | null
+          avg_score?: number | null
+          country: string
+          created_at?: string
+          deadline?: string | null
+          degree: string
+          duration?: string | null
+          field: string
+          id?: string
+          link?: string | null
+          living_cost?: string | null
+          notes?: string | null
+          prestige?: number | null
+          program: string
+          qs_ranking?: number | null
+          require_gpa?: string | null
+          require_lang?: string | null
+          rolling_admission?: boolean | null
+          scholarship?: string | null
+          school: string
+          tuition?: string | null
+          type?: string | null
+          updated_at?: string
+        }
+        Update: {
+          accept_list?: string | null
+          application_materials?: string | null
+          avg_score?: number | null
+          country?: string
+          created_at?: string
+          deadline?: string | null
+          degree?: string
+          duration?: string | null
+          field?: string
+          id?: string
+          link?: string | null
+          living_cost?: string | null
+          notes?: string | null
+          prestige?: number | null
+          program?: string
+          qs_ranking?: number | null
+          require_gpa?: string | null
+          require_lang?: string | null
+          rolling_admission?: boolean | null
+          scholarship?: string | null
+          school?: string
+          tuition?: string | null
+          type?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_onboarding_profiles: {
+        Row: {
+          awards: string | null
+          budget: string | null
+          created_at: string
+          cross_major: string | null
+          current_education: string | null
+          entrepreneurship: string | null
+          gpa: string | null
+          gre_gmat: string | null
+          id: string
+          internship: string | null
+          language_score: string | null
+          language_type: string | null
+          major: string | null
+          other_activities: string | null
+          overseas: string | null
+          ranking_req: string | null
+          research: string | null
+          scholarship: string | null
+          school: string | null
+          special_needs: string | null
+          target_country: string | null
+          target_degree: string | null
+          target_year: string | null
+          updated_at: string
+          user_id: string
+          volunteer: string | null
+        }
+        Insert: {
+          awards?: string | null
+          budget?: string | null
+          created_at?: string
+          cross_major?: string | null
+          current_education?: string | null
+          entrepreneurship?: string | null
+          gpa?: string | null
+          gre_gmat?: string | null
+          id?: string
+          internship?: string | null
+          language_score?: string | null
+          language_type?: string | null
+          major?: string | null
+          other_activities?: string | null
+          overseas?: string | null
+          ranking_req?: string | null
+          research?: string | null
+          scholarship?: string | null
+          school?: string | null
+          special_needs?: string | null
+          target_country?: string | null
+          target_degree?: string | null
+          target_year?: string | null
+          updated_at?: string
+          user_id: string
+          volunteer?: string | null
+        }
+        Update: {
+          awards?: string | null
+          budget?: string | null
+          created_at?: string
+          cross_major?: string | null
+          current_education?: string | null
+          entrepreneurship?: string | null
+          gpa?: string | null
+          gre_gmat?: string | null
+          id?: string
+          internship?: string | null
+          language_score?: string | null
+          language_type?: string | null
+          major?: string | null
+          other_activities?: string | null
+          overseas?: string | null
+          ranking_req?: string | null
+          research?: string | null
+          scholarship?: string | null
+          school?: string | null
+          special_needs?: string | null
+          target_country?: string | null
+          target_degree?: string | null
+          target_year?: string | null
+          updated_at?: string
+          user_id?: string
+          volunteer?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -510,3 +703,5 @@ export const Constants = {
     Enums: {},
   },
 } as const
+A new version of Supabase CLI is available: v2.84.2 (currently installed v2.75.0)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli
