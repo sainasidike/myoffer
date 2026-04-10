@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { getDocumentProxy, extractText } from "npm:unpdf@0.12.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,41 +8,32 @@ const corsHeaders = {
 };
 
 /**
- * Extract text from PDF using basic stream parsing.
- * Works for text-based PDFs, not scanned images.
+ * Extract text from PDF using unpdf (pdf.js wrapper for edge runtimes).
  */
-function extractTextFromPDF(buffer: ArrayBuffer): string {
+async function extractTextFromPDF(buffer: ArrayBuffer): Promise<string> {
   try {
-    const uint8 = new Uint8Array(buffer);
-    const decoder = new TextDecoder("utf-8", { fatal: false });
-    const text = decoder.decode(uint8);
-    const textChunks: string[] = [];
-
-    const parenMatch = text.match(/\(([^)]+)\)/g);
-    if (parenMatch) {
-      for (const match of parenMatch) {
-        const content = match.slice(1, -1);
-        if (content.length > 1 && /[a-zA-Z0-9\u4e00-\u9fa5]/.test(content)) {
-          textChunks.push(content);
-        }
-      }
-    }
-
-    const streamMatch = text.match(/stream\s*([\s\S]*?)\s*endstream/g);
-    if (streamMatch) {
-      for (const stream of streamMatch) {
-        const content = stream.replace(/stream\s*/, "").replace(/\s*endstream/, "");
-        const clean = content.replace(/[^\x20-\x7E\u4e00-\u9fa5\n]/g, " ").trim();
-        if (clean.length > 5) {
-          textChunks.push(clean);
-        }
-      }
-    }
-
-    return textChunks.join(" ").slice(0, 15000);
+    const pdf = await getDocumentProxy(new Uint8Array(buffer));
+    const result = await extractText(pdf, { mergePages: true });
+    const text = typeof result.text === "string" ? result.text : result.text.join("\n");
+    return text.slice(0, 15000);
   } catch (e) {
     console.error("PDF text extraction error:", e);
-    return "";
+    // Fallback: naive extraction for simple PDFs
+    try {
+      const decoder = new TextDecoder("utf-8", { fatal: false });
+      const raw = decoder.decode(new Uint8Array(buffer));
+      const chunks: string[] = [];
+      const parenMatch = raw.match(/\(([^)]+)\)/g);
+      if (parenMatch) {
+        for (const m of parenMatch) {
+          const c = m.slice(1, -1);
+          if (c.length > 1 && /[a-zA-Z0-9\u4e00-\u9fa5]/.test(c)) chunks.push(c);
+        }
+      }
+      return chunks.join(" ").slice(0, 15000);
+    } catch {
+      return "";
+    }
   }
 }
 
@@ -76,48 +68,42 @@ async function extractTextFromDocx(buffer: ArrayBuffer): Promise<string> {
 
 const ANALYSIS_PROMPT = `你是一个专业的留学申请顾问，擅长从文档中提取留学申请相关信息。
 
-请仔细分析以下文档内容，尽可能提取以下类别的信息：
+请仔细分析以下文档内容，尽可能提取留学申请相关信息。
 
-## 提取类别
+## 输出格式（严格遵循）
 
-1. **学术背景**
-   - 目前学历和要申请的学历
-   - 就读的学校
-   - 专业方向（&是否有意向跨专业申请）
-   - GPA/均分
+用以下格式输出，使用中文标签和 Markdown 格式：
 
-2. **标准化成绩**
-   - 语言成绩（托福/雅思，总分及小分）
-   - GRE/GMAT（总分及小分）
+## 学术背景
+- **学校**：xxx
+- **专业**：xxx
+- **当前学历**：本科/硕士
+- **目标学历**：硕士/博士
+- **GPA/均分**：x.x/4.0
 
-3. **其他信息**
-   - 实习经历（公司、职位、时长）
-   - 科研经历（课题、论文发表）
-   - 课外经历（创业、志愿服务、竞赛获奖、课外才艺、海外经历）
-   - 其他留学申请可加分项
+## 标准化成绩
+- **语言考试**：雅思/托福 总分x.x（阅读x.x / 听力x.x / 写作x.x / 口语x.x）
+- **GRE/GMAT**：总分xxx（如有）
 
-## 输出要求
+## 软实力背景
+- **实习经历**：公司名-职位-时长
+- **科研经历**：课题/论文
+- **获奖/课外**：竞赛、志愿、海外经历等
 
-1. 第一部分：用结构化的格式列出你提取到的所有信息，每个字段单独一行
-2. 第二部分：指出文档中你无法确定或需要用户确认的信息
-3. 第三部分：在回复末尾，用以下格式输出可自动保存的字段（用户看不到这些标记）：
-   <<<PROFILE_UPDATE:{"字段名":"值"}>>>
+## 待确认信息
+- 列出文档中你不确定或需要用户确认的信息
 
-可用的字段名：
-- school: 学校名称
-- major: 专业
-- gpa: GPA数值
-- currentEducation: 当前学历（如"本科"、"硕士"）
-- targetDegree: 目标学历（如"硕士"、"博士"）
-- languageType: 语言考试类型（"TOEFL"或"IELTS"）
-- languageScore: 语言成绩（JSON格式，如{"total":100,"reading":25,"listening":25,"speaking":25,"writing":25}）
-- greGmat: GRE/GMAT成绩（如"GRE 320 (V155+Q165+AW4.0)"）
-- internship: 实习经历（数组格式）
-- research: 科研经历（数组格式）
-- awards: 获奖经历（数组格式）
+规则：
+- 如果某个类别没有信息，整个类别都不要输出（不要写"未提及"）
+- 只输出文档中确实包含的信息
+- 不要编造任何信息
 
-只提取你有信心的信息，不确定的不要自动填充。
-不要编造任何信息。如果文档中没有某类信息，就说"未提及"。`;
+最后，在回复最末尾用以下格式输出可自动保存的字段（用户看不到这些标记）：
+<<<PROFILE_UPDATE:{"字段名":"值"}>>>
+
+可用字段名：school, major, gpa, currentEducation, targetDegree, languageType, languageScore（JSON格式如{"total":7.0,"reading":7.5,"listening":7.0,"writing":6.5,"speaking":6.5}）, greGmat, internship（数组）, research（数组）, awards（数组）
+
+只提取你有信心的信息。`;
 
 /**
  * Use GLM-4V multimodal API to analyze an image.
@@ -127,42 +113,54 @@ async function analyzeImage(
   mimeType: string,
   apiKey: string
 ): Promise<string> {
-  const response = await fetch(
-    "https://open.bigmodel.cn/api/paas/v4/chat/completions",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "glm-4v-flash",
-        messages: [
-          {
-            role: "user",
-            content: [
-              { type: "text", text: ANALYSIS_PROMPT + "\n\n请分析这张图片中的内容：" },
-              {
-                type: "image_url",
-                image_url: { url: `data:${mimeType};base64,${base64Data}` },
-              },
-            ],
-          },
-        ],
-        temperature: 0.3,
-        max_tokens: 4096,
-      }),
-    }
-  );
+  // Try multiple model names for GLM-4V compatibility
+  const models = ["glm-4v-flash", "glm-4v", "glm-4v-plus"];
+  const errors: string[] = [];
 
-  if (!response.ok) {
+  for (const model of models) {
+    console.log(`Trying model: ${model}, image size: ${(base64Data.length / 1024).toFixed(0)}KB base64`);
+    const response = await fetch(
+      "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            {
+              role: "user",
+              content: [
+                { type: "text", text: ANALYSIS_PROMPT + "\n\n请分析这张图片中的内容。" },
+                { type: "image_url", image_url: { url: `data:${mimeType};base64,${base64Data}` } },
+              ],
+            },
+          ],
+        }),
+      }
+    );
+
+    if (response.ok) {
+      const data = await response.json();
+      console.log(`Model ${model} succeeded`);
+      return data.choices?.[0]?.message?.content || "无法解析图片内容";
+    }
+
     const err = await response.text();
-    console.error("GLM-4V error:", response.status, err);
-    throw new Error(`图片解析失败 (${response.status})`);
+    console.error(`Model ${model} failed (${response.status}):`, err);
+    errors.push(`${model}(${response.status}): ${err.slice(0, 200)}`);
+
+    // If it's a model-not-found error, try next model
+    if (response.status === 400 || response.status === 404) continue;
+    // For other errors (rate limit, auth), stop trying
+    break;
   }
 
-  const data = await response.json();
-  return data.choices?.[0]?.message?.content || "无法解析图片内容";
+  // Return diagnostic info instead of throwing
+  const diagnostic = errors.join(" | ");
+  throw new Error(`图片解析失败: ${diagnostic}`);
 }
 
 /**
@@ -258,14 +256,19 @@ serve(async (req) => {
           : fileExt === "webp"
           ? "image/webp"
           : "image/jpeg";
-      aiResponse = await analyzeImage(base64, mimeType, ZHIPU_API_KEY);
+      try {
+        aiResponse = await analyzeImage(base64, mimeType, ZHIPU_API_KEY);
+      } catch (imgErr) {
+        console.error("Image analysis failed, all models tried:", imgErr);
+        aiResponse = `我收到了图片「${fileName}」，但视觉识别模型暂时不可用。\n\n请尝试以下替代方式：\n• 将图片中的文字内容直接在对话中告诉我\n• 上传 PDF 或 Word 格式的文档\n• 稍后重试`;
+      }
     }
 
     // PDF files → text extraction → GLM-4-Flash
     else if (fileExt === "pdf") {
       console.log("Extracting PDF text");
       const arrayBuffer = await file.arrayBuffer();
-      const extractedText = extractTextFromPDF(arrayBuffer);
+      const extractedText = await extractTextFromPDF(arrayBuffer);
 
       if (extractedText.trim().length < 20) {
         // PDF might be scanned/image-based, try as image if small enough
