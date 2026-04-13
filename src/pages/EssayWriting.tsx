@@ -239,15 +239,17 @@ export default function EssayWriting() {
   return (
     <div className="flex flex-col md:flex-row h-screen">
       {/* Left: Chat Panel */}
-      <div className="w-full md:w-[40%] flex flex-col border-r border-border">
+      <div className="w-full md:w-[40%] flex flex-col border-r border-border/60">
         {/* Header with essay list */}
-        <div className="px-4 py-3 border-b border-border bg-card space-y-2">
+        <div className="px-4 py-3 border-b border-border/60 bg-white/80 backdrop-blur-sm space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Bot className="w-4 h-4 text-primary" />
-              <h2 className="font-semibold text-sm">AI 文书助手</h2>
+              <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-primary/10 to-blue-500/20 flex items-center justify-center">
+                <Bot className="w-3.5 h-3.5 text-primary" />
+              </div>
+              <h2 className="font-bold text-sm tracking-tight">AI 文书助手</h2>
             </div>
-            <Button size="sm" variant="outline" onClick={handleNewEssay}>
+            <Button size="sm" variant="outline" className="rounded-xl border-border/60 h-8" onClick={handleNewEssay}>
               <Plus className="w-3 h-3 mr-1" />
               新建文书
             </Button>
@@ -259,7 +261,11 @@ export default function EssayWriting() {
                   key={e.id}
                   size="sm"
                   variant={selectedEssayId === e.id ? "default" : "ghost"}
-                  className="text-xs shrink-0 h-7"
+                  className={`text-xs shrink-0 h-7 rounded-lg ${
+                    selectedEssayId === e.id
+                      ? "bg-gradient-to-r from-primary to-blue-600 text-white shadow-soft-sm"
+                      : ""
+                  }`}
                   onClick={() => {
                     autoSave(); // save current before switching
                     setSelectedEssayId(e.id);
@@ -277,14 +283,19 @@ export default function EssayWriting() {
         </div>
 
         {/* Chat messages */}
-        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 bg-muted/30">
+        <div
+          className="flex-1 overflow-y-auto px-4 py-5 space-y-4"
+          style={{ background: "linear-gradient(180deg, hsl(220 20% 98%) 0%, hsl(220 14% 96%) 100%)" }}
+        >
           {chatMessages.length === 0 && !selectedEssayId && (
-            <div className="text-center py-12">
-              <FileText className="w-10 h-10 mx-auto text-muted-foreground/30 mb-3" />
+            <div className="text-center py-12 animate-fade-in-up">
+              <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-primary/10 to-purple-500/10 flex items-center justify-center mb-4">
+                <FileText className="w-8 h-8 text-primary/60" />
+              </div>
               <p className="text-sm text-muted-foreground mb-4">
                 点击「新建文书」开始 AI 辅助创作
               </p>
-              <Button size="sm" onClick={handleNewEssay}>
+              <Button size="sm" className="rounded-xl bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 shadow-soft-sm" onClick={handleNewEssay}>
                 <Plus className="w-3 h-3 mr-1" />
                 新建文书
               </Button>
@@ -292,7 +303,7 @@ export default function EssayWriting() {
           )}
 
           {chatMessages.length === 0 && selectedEssayId && (
-            <div className="text-center py-8">
+            <div className="text-center py-8 animate-fade-in-up">
               <p className="text-sm text-muted-foreground">
                 开始和 AI 对话，描述你想要的文书内容
               </p>
@@ -304,13 +315,13 @@ export default function EssayWriting() {
               key={msg.id}
               className={`flex ${
                 msg.role === "user" ? "justify-end" : "justify-start"
-              }`}
+              } animate-message-in`}
             >
               <div
                 className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
                   msg.role === "user"
-                    ? "bg-primary text-primary-foreground rounded-br-md"
-                    : "bg-card text-card-foreground border border-border rounded-bl-md shadow-sm"
+                    ? "bg-gradient-to-r from-primary to-blue-600 text-white rounded-br-md shadow-soft-sm"
+                    : "bg-white text-foreground border border-border/60 rounded-bl-md shadow-soft-sm"
                 }`}
               >
                 {msg.content}
@@ -318,7 +329,7 @@ export default function EssayWriting() {
                   <Button
                     variant="link"
                     size="sm"
-                    className="text-xs mt-2 p-0 h-auto"
+                    className="text-xs mt-2 p-0 h-auto text-primary"
                     onClick={() => handleApplyFromChat(msg.content)}
                   >
                     应用到编辑器 →
@@ -329,12 +340,12 @@ export default function EssayWriting() {
           ))}
 
           {isStreaming && (
-            <div className="flex justify-start">
-              <div className="bg-card border border-border rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
+            <div className="flex justify-start animate-message-in">
+              <div className="bg-white border border-border/60 rounded-2xl rounded-bl-md px-4 py-3 shadow-soft-sm">
                 <div className="flex gap-1">
-                  <div className="w-2 h-2 rounded-full bg-muted-foreground/40 animate-bounce" style={{ animationDelay: "0ms" }} />
-                  <div className="w-2 h-2 rounded-full bg-muted-foreground/40 animate-bounce" style={{ animationDelay: "150ms" }} />
-                  <div className="w-2 h-2 rounded-full bg-muted-foreground/40 animate-bounce" style={{ animationDelay: "300ms" }} />
+                  <div className="w-2 h-2 rounded-full bg-primary/40 animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <div className="w-2 h-2 rounded-full bg-primary/40 animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <div className="w-2 h-2 rounded-full bg-primary/40 animate-bounce" style={{ animationDelay: "300ms" }} />
                 </div>
               </div>
             </div>
@@ -344,9 +355,9 @@ export default function EssayWriting() {
         </div>
 
         {/* Input */}
-        <div className="px-4 py-3 border-t border-border bg-card">
-          <div className="flex items-center gap-2">
-            <Input
+        <div className="px-4 py-3 border-t border-border/40 bg-white">
+          <div className="flex items-center gap-2 bg-muted/50 rounded-2xl px-2 py-1.5 border border-border/50 focus-within:border-primary/30 focus-within:ring-2 focus-within:ring-primary/10 transition-all">
+            <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSend()}
@@ -355,7 +366,7 @@ export default function EssayWriting() {
                   ? "描述你想要的文书内容..."
                   : "请先创建一篇文书"
               }
-              className="flex-1"
+              className="flex-1 bg-transparent border-none outline-none text-sm text-foreground placeholder:text-muted-foreground/60 h-9 px-2"
               disabled={!selectedEssayId || isStreaming}
             />
             <Button
@@ -363,6 +374,7 @@ export default function EssayWriting() {
               onClick={handleSend}
               disabled={!input.trim() || !selectedEssayId || isStreaming}
               aria-label="发送消息"
+              className="shrink-0 rounded-xl h-9 w-9 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 disabled:from-muted disabled:to-muted shadow-none"
             >
               {isStreaming ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -376,57 +388,62 @@ export default function EssayWriting() {
 
       {/* Right: Editor Panel (60%) */}
       <div className="flex-1 flex flex-col">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-card">
-          <h2 className="font-semibold text-sm truncate">{currentEssayTitle}</h2>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border/60 bg-white/80 backdrop-blur-sm">
+          <h2 className="font-bold text-sm tracking-tight truncate">{currentEssayTitle}</h2>
           <div className="flex items-center gap-1">
             <Button
               variant="ghost"
               size="sm"
+              className="rounded-lg text-xs"
               onClick={handleCopy}
               disabled={!essayContent}
             >
-              <Copy className="w-4 h-4 mr-1" />
+              <Copy className="w-3.5 h-3.5 mr-1" />
               复制
             </Button>
             <Button
               variant="ghost"
               size="sm"
+              className="rounded-lg text-xs"
               onClick={handleSave}
               disabled={!selectedEssayId || !essayContent || isSaving}
             >
               {isSaving ? (
-                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
               ) : essayContent && essayContent === savedContentRef.current ? (
-                <Check className="w-4 h-4 mr-1 text-green-500" />
+                <Check className="w-3.5 h-3.5 mr-1 text-green-500" />
               ) : (
-                <Save className="w-4 h-4 mr-1" />
+                <Save className="w-3.5 h-3.5 mr-1" />
               )}
               {essayContent && essayContent === savedContentRef.current ? "已保存" : "保存"}
             </Button>
           </div>
         </div>
 
-        <div className="flex-1 p-6 overflow-y-auto">
+        <div className="flex-1 p-6 overflow-y-auto bg-white">
           {selectedEssayId ? (
             <textarea
               value={essayContent}
               onChange={(e) => setEssayContent(e.target.value)}
-              className="w-full h-full resize-none bg-transparent text-sm leading-relaxed focus:outline-none placeholder:text-muted-foreground/50"
+              className="w-full h-full resize-none bg-transparent text-sm leading-[1.8] focus:outline-none placeholder:text-muted-foreground/50"
               placeholder={"在这里撰写或编辑你的文书...\n\n你可以：\n1. 直接在这里写\n2. 在左侧和 AI 对话，让 AI 帮你生成\n3. 点击 AI 回复中的「应用到编辑器」按钮"}
             />
           ) : (
-            <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
+            <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-sm animate-fade-in-up">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/10 to-purple-500/10 flex items-center justify-center mb-4">
+                <FileText className="w-8 h-8 text-primary/50" />
+              </div>
               请先在左侧创建或选择一篇文书
             </div>
           )}
         </div>
 
-        <div className="px-4 py-3 border-t border-border bg-card">
-          <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+        <div className="px-4 py-3 border-t border-border/40 bg-white">
+          <div className="flex items-center justify-between text-xs text-muted-foreground mb-1.5">
             <span>
               字数：{wordCount} / {targetWords}
             </span>
-            <span>
+            <span className="font-medium">
               {Math.min(Math.round((wordCount / targetWords) * 100), 100)}%
             </span>
           </div>

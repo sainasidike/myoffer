@@ -100,20 +100,20 @@ function AppCard({
 
   return (
     <Card
-      className="hover:shadow-md transition-shadow cursor-pointer"
+      className="card-hover border-border/60 shadow-soft-sm cursor-pointer"
       onClick={onClick}
     >
       <CardContent className="p-5 space-y-3">
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold truncate">
+            <h3 className="font-bold tracking-tight truncate">
               {prog?.university_name_cn || prog?.university_name || "未知学校"}
             </h3>
             <p className="text-xs text-muted-foreground mt-0.5 truncate">
               {prog?.program_name_cn || prog?.program_name || ""}
             </p>
           </div>
-          <Badge className={`${statusInfo.color} border-0 text-xs shrink-0`}>
+          <Badge className={`${statusInfo.color} border-0 text-xs shrink-0 rounded-lg`}>
             {statusInfo.label}
           </Badge>
         </div>
@@ -229,21 +229,21 @@ function AppDetail({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 page-enter">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" onClick={onBack}>
+        <Button variant="ghost" size="icon" className="rounded-xl" onClick={onBack}>
           <ChevronLeft className="w-5 h-5" />
         </Button>
         <div className="flex-1 min-w-0">
-          <h2 className="text-lg font-bold truncate">
+          <h2 className="text-lg font-bold tracking-tight truncate">
             {prog?.university_name_cn || prog?.university_name || "未知学校"}
           </h2>
           <p className="text-sm text-muted-foreground truncate">
             {prog?.program_name_cn || prog?.program_name || ""}
           </p>
         </div>
-        <Badge className={`${statusInfo.color} border-0 text-sm`}>
+        <Badge className={`${statusInfo.color} border-0 text-sm rounded-lg`}>
           {statusInfo.label}
         </Badge>
       </div>
@@ -251,12 +251,12 @@ function AppDetail({
       {/* Info bar */}
       <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
         {dl && (
-          <span className={`flex items-center gap-1.5 ${dl.urgent ? "text-destructive font-medium" : ""}`}>
+          <span className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg ${dl.urgent ? "text-destructive font-medium bg-destructive/5" : "bg-muted/60"}`}>
             {dl.urgent ? <AlertTriangle className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
             截止：{dl.text}
           </span>
         )}
-        <span className="flex items-center gap-1.5">
+        <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted/60">
           <CheckCircle2 className="w-4 h-4" />
           材料进度：{doneCt}/{totalCt} ({pct}%)
           {inProgressCt > 0 && <span className="text-blue-500">· {inProgressCt}项进行中</span>}
@@ -267,8 +267,8 @@ function AppDetail({
       <Progress value={pct} className="h-2" />
 
       {/* Material Checklist */}
-      <Card>
-        <CardContent className="p-0 divide-y divide-border">
+      <Card className="border-border/60 shadow-soft-sm overflow-hidden">
+        <CardContent className="p-0 divide-y divide-border/60">
           {app.materials.map((mat) => {
             const isDone = mat.status === "submitted";
             const isEssay = ESSAY_TYPES.has(mat.material_type);
@@ -388,7 +388,7 @@ function AppDetail({
       <div className="flex flex-wrap gap-3">
         {/* Status change buttons */}
         {app.status === "in_progress" && pct === 100 && (
-          <Button size="sm" onClick={() => handleStatusChange("submitted")}>
+          <Button size="sm" className="bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 shadow-soft-sm" onClick={() => handleStatusChange("submitted")}>
             <CheckCircle2 className="w-4 h-4 mr-1" />
             标记为已申请
           </Button>
@@ -397,7 +397,7 @@ function AppDetail({
           <>
             <Button
               size="sm"
-              className="bg-green-600 hover:bg-green-700"
+              className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-500/90 hover:to-emerald-600/90 text-white shadow-soft-sm"
               onClick={() => handleStatusChange("accepted")}
             >
               标记为已录取
@@ -494,7 +494,7 @@ export default function ApplicationTracker() {
   }
 
   return (
-    <div className="p-6 space-y-6 max-w-5xl mx-auto">
+    <div className="p-6 space-y-6 max-w-5xl mx-auto page-enter">
       {selectedApp ? (
         <AppDetail
           app={selectedApp}
@@ -504,7 +504,7 @@ export default function ApplicationTracker() {
         <>
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-xl font-bold">申请管家</h1>
+              <h1 className="text-xl font-bold tracking-tight">申请管家</h1>
               <p className="text-sm text-muted-foreground mt-1">
                 共 {stats.total} 个申请 · 进行中 {stats.inProgress} · 已申请{" "}
                 {stats.submitted} · 已录取 {stats.accepted}
@@ -513,7 +513,7 @@ export default function ApplicationTracker() {
           </div>
 
           <Tabs value={filter} onValueChange={setFilter}>
-            <TabsList>
+            <TabsList className="bg-muted/60">
               <TabsTrigger value="all">全部 ({stats.total})</TabsTrigger>
               <TabsTrigger value="in_progress">
                 进行中 ({stats.inProgress})
@@ -524,14 +524,21 @@ export default function ApplicationTracker() {
           </Tabs>
 
           {filtered.length === 0 ? (
-            <Card>
-              <CardContent className="p-12 text-center">
-                <FolderOpen className="w-12 h-12 mx-auto text-muted-foreground/30 mb-4" />
-                <h3 className="text-lg font-semibold mb-2">暂无申请</h3>
-                <p className="text-sm text-muted-foreground mb-6">
+            <Card className="border-border/60 shadow-soft">
+              <CardContent className="p-16 text-center">
+                <div className="w-20 h-20 mx-auto rounded-2xl bg-gradient-to-br from-primary/10 to-purple-500/10 flex items-center justify-center mb-6">
+                  <FolderOpen className="w-10 h-10 text-primary/60" />
+                </div>
+                <h3 className="text-xl font-bold mb-2">暂无申请</h3>
+                <p className="text-sm text-muted-foreground mb-8 max-w-md mx-auto leading-relaxed">
                   前往选校页面，将心仪的项目加入申请列表
                 </p>
-                <Button onClick={() => navigate("/schools")}>去选校</Button>
+                <Button
+                  onClick={() => navigate("/schools")}
+                  className="h-11 px-8 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 shadow-soft-sm"
+                >
+                  去选校
+                </Button>
               </CardContent>
             </Card>
           ) : (

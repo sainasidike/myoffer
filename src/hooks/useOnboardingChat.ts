@@ -41,6 +41,33 @@ function mapToDbFields(updates: Record<string, unknown>): Record<string, unknown
   return mapped;
 }
 
+// Sanitize values before DB write — convert numeric fields, parse "3.5/4.0" patterns
+const NUMERIC_FIELDS = new Set(["gpa", "gpa_scale", "target_year"]);
+function sanitizeForDb(mapped: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(mapped)) {
+    if (NUMERIC_FIELDS.has(key) && typeof value === "string") {
+      // Handle "3.5/4.0" → gpa=3.5, gpa_scale=4.0
+      if (key === "gpa") {
+        const parts = value.match(/^(\d+\.?\d*)\s*[/／]\s*(\d+\.?\d*)$/);
+        if (parts) {
+          result.gpa = parseFloat(parts[1]);
+          if (!mapped.gpa_scale) result.gpa_scale = parseFloat(parts[2]);
+        } else {
+          const num = parseFloat(value);
+          if (!isNaN(num)) result.gpa = num;
+        }
+      } else {
+        const num = parseFloat(value);
+        if (!isNaN(num)) result[key] = num;
+      }
+    } else {
+      result[key] = value;
+    }
+  }
+  return result;
+}
+
 // ---- Fallback: extract profile fields directly from user message ----
 
 function extractFromUserMessage(text: string): Record<string, unknown> {
@@ -194,6 +221,7 @@ export function useOnboardingChat() {
   const { profile, updateProfileAsync } = useProfile();
   const queryClient = useQueryClient();
   const abortRef = useRef(false);
+  const openingInProgressRef = useRef(false);
   const messagesRef = useRef<ChatMessage[]>([]);
 
   const applyProfileUpdates = useCallback(
@@ -201,7 +229,7 @@ export function useOnboardingChat() {
       const { cleanText, updates } = extractProfileUpdates(text);
       if (Object.keys(updates).length > 0) {
         try {
-          const mapped = mapToDbFields(updates);
+          const mapped = sanitizeForDb(mapToDbFields(updates));
           // Apply all updates — AI is instructed to only output genuinely new/modified fields
           if (Object.keys(mapped).length > 0) {
             await updateProfileAsync(mapped);
@@ -232,10 +260,12 @@ export function useOnboardingChat() {
   // Trigger AI opening message when loaded with no history, or after reset
   useEffect(() => {
     if ((!isLoaded && !shouldTriggerOpening) || messages.length > 0 || isStreaming) return;
+    if (openingInProgressRef.current) return;
     if (shouldTriggerOpening) setShouldTriggerOpening(false);
 
     // Send an empty trigger to get AI's opening message
     const triggerOpening = async () => {
+      openingInProgressRef.current = true;
       setIsStreaming(true);
       abortRef.current = false;
 
@@ -273,6 +303,7 @@ export function useOnboardingChat() {
           // Save AI opening message to DB
           await saveMessageToDB("ai", cleanText);
           setIsStreaming(false);
+          openingInProgressRef.current = false;
         },
         onError: (error) => {
           setMessages((prev) => {
@@ -282,6 +313,7 @@ export function useOnboardingChat() {
             return updated;
           });
           setIsStreaming(false);
+          openingInProgressRef.current = false;
         },
       });
     };
@@ -341,9 +373,19 @@ export function useOnboardingChat() {
           const aiTextUpdates = extractFromUserMessage(cleanText);
           // Merge: user message > AI response text (for supplementary fields AI markers don't cover)
           const supplementUpdates = { ...aiTextUpdates, ...userUpdates };
-          if (Object.keys(supplementUpdates).length > 0) {
+          // Filter out fields where profile already has non-empty values to prevent overwriting
+          const filtered: Record<string, unknown> = {};
+          for (const [key, value] of Object.entries(supplementUpdates)) {
+            const existing = profile?.[key as keyof typeof profile];
+            const isEmpty = existing === null || existing === undefined || existing === "" ||
+              (Array.isArray(existing) && existing.length === 0);
+            if (isEmpty) {
+              filtered[key] = value;
+            }
+          }
+          if (Object.keys(filtered).length > 0) {
             try {
-              await updateProfileAsync(supplementUpdates);
+              await updateProfileAsync(sanitizeForDb(filtered));
               queryClient.invalidateQueries({ queryKey: ["profile"] });
             } catch (err) {
               console.error("Failed to apply supplement updates:", err);
@@ -491,14 +533,39 @@ export function useOnboardingChat() {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
       await supabase.from("chat_messages").delete().eq("user_id", user.id);
+      // Clear profile data so completeness resets to 0
+      await supabase.from("profiles").update({
+        target_degree: null,
+        current_education: null,
+        school: null,
+        major: null,
+        gpa: null,
+        gpa_scale: null,
+        cross_major: null,
+        language_type: null,
+        language_score: null,
+        gre_gmat: null,
+        internship: null,
+        research: null,
+        awards: null,
+        target_country: null,
+        target_year: null,
+        budget: null,
+        ranking_req: null,
+        special_needs: null,
+        profile_summary: null,
+      }).eq("id", user.id);
     }
     abortRef.current = true;
+    openingInProgressRef.current = false;
     setMessages([]);
     setIsStreaming(false);
     setIsParsing(false);
+    // Invalidate profile cache so UI shows 0%
+    queryClient.invalidateQueries({ queryKey: ["profile"] });
     // Trigger opening message via state flag (no setTimeout hack)
     setShouldTriggerOpening(true);
-  }, []);
+  }, [queryClient]);
 
   // Derive parsed file names from messages for session persistence
   const parsedFileNames = useMemo(() => {

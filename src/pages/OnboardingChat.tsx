@@ -116,14 +116,17 @@ export default function OnboardingChat() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  const readyKeywords = ["开始吧", "没有其他信息", "没有补充", "差不多了", "可以选校", "选校", "开始选校", "没有了", "就这些"];
+  const [showMatchingCTA, setShowMatchingCTA] = useState(false);
+
   const handleSend = () => {
     if (!input.trim() || isBusy) return;
     const text = input;
     setInput("");
     sendMessage(text);
-    // 检测"选校"关键词，档案完整度足够时自动跳转
-    if (text.includes("选校") && completionPct >= 60) {
-      setTimeout(() => navigate("/schools?auto=1"), 800);
+    // 检测"准备就绪"意图，显示选校入口
+    if (completionPct >= 60 && readyKeywords.some((kw) => text.includes(kw))) {
+      setShowMatchingCTA(true);
     }
   };
 
@@ -167,22 +170,22 @@ export default function OnboardingChat() {
         {/* Chat Area */}
         <div className="flex-1 flex flex-col">
           {/* Chat Header */}
-          <div className="flex items-center gap-3 px-6 py-4 border-b border-border bg-card">
-            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+          <div className="flex items-center gap-3 px-6 py-4 border-b border-border/60 bg-white/80 backdrop-blur-sm">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/10 to-blue-500/20 flex items-center justify-center">
               <Bot className="w-5 h-5 text-primary" />
             </div>
             <div className="flex-1">
-              <div className="text-sm font-semibold text-foreground">
-                MyOffer AI 顾问 · 小M
+              <div className="text-sm font-bold text-foreground tracking-tight">
+                小M · AI 留学顾问
               </div>
-              <div className="text-xs text-muted-foreground">
+              <div className="text-[11px] text-muted-foreground mt-0.5">
                 {isParsing
                   ? "正在解析文档..."
                   : isStreaming
-                  ? "正在回复..."
+                  ? "正在输入..."
                   : !isLoaded
-                  ? "加载中..."
-                  : "正在收集你的申请信息"}
+                  ? "连接中..."
+                  : "随时为你解答"}
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -202,7 +205,7 @@ export default function OnboardingChat() {
                   <AlertDialogHeader>
                     <AlertDialogTitle>重新开始对话？</AlertDialogTitle>
                     <AlertDialogDescription>
-                      这将清除所有聊天记录。已保存到档案中的信息不会丢失。
+                      这将清除所有聊天记录和已收集的档案信息，从头开始录入。
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
@@ -290,7 +293,8 @@ export default function OnboardingChat() {
 
           {/* Messages */}
           <div
-            className="flex-1 overflow-y-auto px-6 py-5 space-y-5 bg-muted/30"
+            className="flex-1 overflow-y-auto px-6 py-6 space-y-6"
+            style={{ background: "linear-gradient(180deg, hsl(220 20% 98%) 0%, hsl(220 14% 96%) 100%)" }}
             onDrop={handleDrop}
             onDragOver={handleDragOver}
           >
@@ -305,7 +309,7 @@ export default function OnboardingChat() {
               if (msg.type === "parse-result" && msg.role === "ai") {
                 return (
                   <div key={msg.id} className="flex gap-3 justify-start animate-message-in">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-1">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-blue-500/20 ring-2 ring-primary/10 flex items-center justify-center shrink-0 mt-1">
                       <Bot className="w-4 h-4 text-primary" />
                     </div>
                     {msg.content ? (
@@ -334,15 +338,15 @@ export default function OnboardingChat() {
                   }`}
                 >
                   {msg.role === "ai" && (
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-1">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-blue-500/20 ring-2 ring-primary/10 flex items-center justify-center shrink-0 mt-1">
                       <Bot className="w-4 h-4 text-primary" />
                     </div>
                   )}
                   <div
                     className={`max-w-[70%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
                       msg.role === "user"
-                        ? "bg-primary text-primary-foreground rounded-br-md whitespace-pre-wrap"
-                        : "bg-card text-foreground border border-border rounded-bl-md shadow-sm"
+                        ? "bg-gradient-to-r from-primary to-blue-600 text-white rounded-br-md whitespace-pre-wrap shadow-soft-sm"
+                        : "bg-white text-foreground border border-border/60 rounded-bl-md shadow-soft-sm"
                     }`}
                   >
                     {msg.content ? (
@@ -365,8 +369,8 @@ export default function OnboardingChat() {
                     )}
                   </div>
                   {msg.role === "user" && (
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-1">
-                      <span className="text-xs font-semibold text-primary">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center shrink-0 mt-1">
+                      <span className="text-[11px] font-bold text-white">
                         我
                       </span>
                     </div>
@@ -374,6 +378,20 @@ export default function OnboardingChat() {
                 </div>
               );
             })}
+
+            {/* Inline school matching CTA */}
+            {showMatchingCTA && !isStreaming && (
+              <div className="flex justify-center animate-message-in py-2">
+                <Button
+                  className="gap-2 h-11 px-6 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 shadow-soft text-white"
+                  onClick={() => navigate("/schools?auto=1")}
+                >
+                  <GraduationCap className="w-4 h-4" />
+                  开始 AI 智能选校
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
 
             <div ref={chatEndRef} />
           </div>
@@ -421,8 +439,8 @@ export default function OnboardingChat() {
           )}
 
           {/* Input Bar */}
-          <div className="px-6 py-4 border-t border-border bg-card">
-            <div className="flex items-center gap-2 max-w-4xl mx-auto">
+          <div className="px-6 py-4 border-t border-border/40 bg-white">
+            <div className="flex items-center gap-2 max-w-4xl mx-auto bg-muted/50 rounded-2xl px-2 py-1.5 border border-border/50 focus-within:border-primary/30 focus-within:ring-2 focus-within:ring-primary/10 transition-all">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -434,24 +452,24 @@ export default function OnboardingChat() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="shrink-0 text-muted-foreground hover:text-foreground"
+                className="shrink-0 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-xl h-9 w-9"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isBusy}
                 title="上传文件（PDF、Word、图片）"
                 aria-label="上传文件"
               >
-                <Paperclip className="w-5 h-5" />
+                <Paperclip className="w-[18px] h-[18px]" />
               </Button>
-              <Input
+              <input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSend()}
                 placeholder={
                   isParsing
                     ? "文档解析中，请稍候..."
-                    : "输入回复，或点击左侧按钮上传文件..."
+                    : "输入你的回复..."
                 }
-                className="flex-1"
+                className="flex-1 bg-transparent border-none outline-none text-sm text-foreground placeholder:text-muted-foreground/60 h-9 px-1"
                 disabled={isBusy}
               />
               <Button
@@ -459,6 +477,7 @@ export default function OnboardingChat() {
                 onClick={handleSend}
                 disabled={!input.trim() || isBusy}
                 aria-label="发送消息"
+                className="shrink-0 rounded-xl h-9 w-9 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 disabled:from-muted disabled:to-muted shadow-none"
               >
                 {isStreaming ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -471,23 +490,24 @@ export default function OnboardingChat() {
         </div>
 
         {/* Right Panel */}
-        <div className="w-[280px] border-l border-border bg-card p-5 space-y-5 overflow-y-auto hidden lg:block">
+        <div className="w-[280px] border-l border-border/60 bg-white/60 backdrop-blur-sm p-5 space-y-5 overflow-y-auto hidden lg:block">
           {/* Profile completeness */}
-          <div className="rounded-xl border border-border p-4 space-y-4">
-            <div className="text-sm font-semibold text-foreground">
-              档案完整度
-            </div>
+          <div className="rounded-2xl border border-border/60 p-5 space-y-4 shadow-soft-sm bg-white">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">已收集信息</span>
-              <span className="text-lg font-bold text-primary">
-                {completionPct}%
-              </span>
-            </div>
-            <div className="w-full h-2 rounded-full bg-muted overflow-hidden">
-              <div
-                className="h-full rounded-full bg-primary transition-all duration-500"
-                style={{ width: `${completionPct}%` }}
-              />
+              <div className="text-sm font-bold text-foreground">档案完整度</div>
+              <div className="relative w-12 h-12">
+                <svg className="w-12 h-12 -rotate-90" viewBox="0 0 48 48">
+                  <circle cx="24" cy="24" r="20" fill="none" stroke="hsl(var(--muted))" strokeWidth="4" />
+                  <circle cx="24" cy="24" r="20" fill="none" stroke="url(#progressGradient)" strokeWidth="4" strokeLinecap="round" strokeDasharray={`${completionPct * 1.256} 125.6`} className="transition-all duration-700 ease-out" />
+                  <defs>
+                    <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stopColor="hsl(221 83% 53%)" />
+                      <stop offset="100%" stopColor="hsl(258 90% 66%)" />
+                    </linearGradient>
+                  </defs>
+                </svg>
+                <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-primary">{completionPct}%</span>
+              </div>
             </div>
             <div className="space-y-2.5 pt-1">
               {profileFieldChecks.map((f) => {

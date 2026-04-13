@@ -91,7 +91,7 @@ function SchoolCard({
   const notes = (prog as Record<string, unknown>).notes as string | null;
 
   return (
-    <Card className="transition-shadow hover:shadow-md">
+    <Card className="card-hover border-border/60 shadow-soft-sm overflow-hidden">
       <CardContent className="p-4 space-y-3">
         {/* Level 1: School + Program + Probability */}
         <div className="flex items-start justify-between">
@@ -350,22 +350,20 @@ export default function SchoolMatching() {
   };
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
+    <div className="p-6 space-y-6 max-w-7xl mx-auto page-enter">
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
+        <Card className="border-border/60 shadow-soft-sm">
           <CardContent className="flex items-center gap-4 p-5">
-            <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center">
+            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary/10 to-blue-500/20 flex items-center justify-center">
               <TrendingUp className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">
-                {matchState.competitiveness > 0 ? "综合竞争力" : "匹配项目数"}
-              </p>
+              <p className="text-xs text-muted-foreground">综合竞争力</p>
               <p className="text-2xl font-bold">
                 {matchState.competitiveness > 0
                   ? `${matchState.competitiveness}分`
-                  : stats.total}
+                  : "—"}
               </p>
               {matchState.competitiveness > 0 && (
                 <p className="text-[10px] text-muted-foreground">
@@ -375,9 +373,9 @@ export default function SchoolMatching() {
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-border/60 shadow-soft-sm">
           <CardContent className="flex items-center gap-4 p-5">
-            <div className="w-11 h-11 rounded-xl bg-green-500/10 flex items-center justify-center">
+            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-green-500/10 to-emerald-500/20 flex items-center justify-center">
               <Target className="w-5 h-5 text-green-500" />
             </div>
             <div>
@@ -388,9 +386,9 @@ export default function SchoolMatching() {
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-border/60 shadow-soft-sm">
           <CardContent className="flex items-center gap-4 p-5">
-            <div className="w-11 h-11 rounded-xl bg-purple-500/10 flex items-center justify-center">
+            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-purple-500/10 to-violet-500/20 flex items-center justify-center">
               <BarChart3 className="w-5 h-5 text-purple-500" />
             </div>
             <div>
@@ -478,14 +476,19 @@ export default function SchoolMatching() {
 
       {/* Empty state */}
       {!hasResults && !matchState.isMatching && !matchState.error && (
-        <Card>
-          <CardContent className="p-12 text-center">
-            <GraduationCap className="w-12 h-12 mx-auto text-muted-foreground/30 mb-4" />
-            <h3 className="text-lg font-semibold mb-2">准备好开始选校了吗？</h3>
-            <p className="text-sm text-muted-foreground mb-6">
-              AI 将根据你的背景，从 50+ 项目中精准匹配最适合你的学校
+        <Card className="border-border/60 shadow-soft">
+          <CardContent className="p-16 text-center">
+            <div className="w-20 h-20 mx-auto rounded-2xl bg-gradient-to-br from-primary/10 to-purple-500/10 flex items-center justify-center mb-6">
+              <GraduationCap className="w-10 h-10 text-primary/60" />
+            </div>
+            <h3 className="text-xl font-bold mb-2">准备好开始选校了吗？</h3>
+            <p className="text-sm text-muted-foreground mb-8 max-w-md mx-auto leading-relaxed">
+              AI 将根据你的学术背景、语言成绩和申请偏好，从 50+ 项目中精准匹配最适合你的学校
             </p>
-            <Button onClick={handleStartMatching}>
+            <Button
+              onClick={handleStartMatching}
+              className="h-11 px-8 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 shadow-soft-sm"
+            >
               开始 AI 智能选校
             </Button>
           </CardContent>
@@ -501,10 +504,10 @@ export default function SchoolMatching() {
             );
             const headerColor =
               cat.color === "warning"
-                ? "bg-orange-500/10 text-orange-500"
+                ? "bg-gradient-to-r from-orange-500/10 to-amber-500/10 text-orange-600"
                 : cat.color === "info"
-                ? "bg-blue-500/10 text-blue-500"
-                : "bg-purple-500/10 text-purple-500";
+                ? "bg-gradient-to-r from-blue-500/10 to-primary/10 text-blue-600"
+                : "bg-gradient-to-r from-purple-500/10 to-violet-500/10 text-purple-600";
 
             return (
               <div key={cat.title} className="space-y-3">
