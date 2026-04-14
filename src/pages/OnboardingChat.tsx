@@ -44,6 +44,8 @@ import { useProfile } from "@/hooks/useProfile";
 import ParseResultCard from "@/components/onboarding/ParseResultCard";
 import { renderMarkdown } from "@/lib/renderMarkdown";
 
+const READY_KEYWORDS = ["开始吧", "没有其他信息", "没有补充", "差不多了", "可以选校", "选校", "开始选校", "没有了", "就这些"];
+
 // Map profile DB fields to display labels, check functions, and prompt hints
 const profileFieldChecks = [
   {
@@ -116,7 +118,6 @@ export default function OnboardingChat() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const readyKeywords = ["开始吧", "没有其他信息", "没有补充", "差不多了", "可以选校", "选校", "开始选校", "没有了", "就这些"];
   const [showMatchingCTA, setShowMatchingCTA] = useState(false);
 
   const handleSend = () => {
@@ -125,7 +126,7 @@ export default function OnboardingChat() {
     setInput("");
     sendMessage(text);
     // 检测"准备就绪"意图，显示选校入口
-    if (completionPct >= 60 && readyKeywords.some((kw) => text.includes(kw))) {
+    if (completionPct >= 60 && READY_KEYWORDS.some((kw) => text.includes(kw))) {
       setShowMatchingCTA(true);
     }
   };

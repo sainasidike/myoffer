@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { callEdgeFunction } from "@/lib/ai";
@@ -17,6 +17,8 @@ export function useEssays() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [currentEssayId, setCurrentEssayId] = useState<string | null>(null);
+  const chatMessagesRef = useRef<ChatMessage[]>([]);
+  useEffect(() => { chatMessagesRef.current = chatMessages; }, [chatMessages]);
 
   // Fetch all essays
   const { data: essays, isLoading } = useQuery({
@@ -184,7 +186,7 @@ export function useEssays() {
         content: userText,
       });
 
-      const apiMessages = [...chatMessages, userMsg].map((m) => ({
+      const apiMessages = [...chatMessagesRef.current, userMsg].map((m) => ({
         role: m.role,
         content: m.content,
       }));
@@ -242,7 +244,7 @@ export function useEssays() {
         }
       );
     },
-    [isStreaming, chatMessages]
+    [isStreaming]
   );
 
   return {

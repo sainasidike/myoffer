@@ -32,7 +32,7 @@ export default function SettingsPage() {
     { label: "目标国家", value: Array.isArray(profile?.target_country) ? (profile.target_country as string[]).join("、") : profile?.target_country },
     { label: "目标入学年份", value: profile?.target_year },
     { label: "预算", value: profile?.budget },
-  ].filter((f) => f.value);
+  ].filter((f) => f.value !== null && f.value !== undefined && f.value !== "");
 
   return (
     <div className="p-6 space-y-6 max-w-2xl mx-auto page-enter">
