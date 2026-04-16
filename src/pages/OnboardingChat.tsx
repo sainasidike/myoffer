@@ -44,7 +44,7 @@ import { useProfile } from "@/hooks/useProfile";
 import ParseResultCard from "@/components/onboarding/ParseResultCard";
 import { renderMarkdown } from "@/lib/renderMarkdown";
 
-const READY_KEYWORDS = ["开始吧", "没有其他信息", "没有补充", "差不多了", "可以选校", "选校", "开始选校", "没有了", "就这些"];
+const READY_KEYWORDS = ["开始吧", "直接开始", "没有其他信息", "没有补充", "差不多了", "可以选校", "选校", "开始选校", "没有了", "就这些", "开始匹配"];
 
 // Map profile DB fields to display labels, check functions, and prompt hints
 const profileFieldChecks = [
@@ -118,17 +118,18 @@ export default function OnboardingChat() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const [showMatchingCTA, setShowMatchingCTA] = useState(false);
-
   const handleSend = () => {
     if (!input.trim() || isBusy) return;
     const text = input;
     setInput("");
-    sendMessage(text);
-    // 检测"准备就绪"意图，显示选校入口
+
+    // 检测"准备就绪"意图 → 直接跳转选校页面
     if (completionPct >= 60 && READY_KEYWORDS.some((kw) => text.includes(kw))) {
-      setShowMatchingCTA(true);
+      navigate("/schools?auto=1");
+      return;
     }
+
+    sendMessage(text);
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -379,20 +380,6 @@ export default function OnboardingChat() {
                 </div>
               );
             })}
-
-            {/* Inline school matching CTA */}
-            {showMatchingCTA && !isStreaming && (
-              <div className="flex justify-center animate-message-in py-2">
-                <Button
-                  className="gap-2 h-11 px-6 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 shadow-soft text-white"
-                  onClick={() => navigate("/schools?auto=1")}
-                >
-                  <GraduationCap className="w-4 h-4" />
-                  开始 AI 智能选校
-                  <ArrowRight className="w-4 h-4" />
-                </Button>
-              </div>
-            )}
 
             <div ref={chatEndRef} />
           </div>
