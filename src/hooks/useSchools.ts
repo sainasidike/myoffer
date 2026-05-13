@@ -28,7 +28,13 @@ interface SchoolMatchingState {
 
 const CACHE_KEY = "myoffer_match_results";
 
-function loadCachedResults(): { results: MatchedSchool[]; competitiveness: number } | null {
+interface CachedMatchResults {
+  results: MatchedSchool[];
+  competitiveness: number;
+  filters?: { countries?: string[]; degree?: string };
+}
+
+function loadCachedResults(): CachedMatchResults | null {
   try {
     const raw = localStorage.getItem(CACHE_KEY);
     if (!raw) return null;
@@ -38,10 +44,27 @@ function loadCachedResults(): { results: MatchedSchool[]; competitiveness: numbe
   return null;
 }
 
-function saveCachedResults(results: MatchedSchool[], competitiveness: number) {
+function saveCachedResults(results: MatchedSchool[], competitiveness: number, filters?: { countries?: string[]; degree?: string }) {
   try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify({ results, competitiveness }));
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ results, competitiveness, filters }));
   } catch { /* ignore */ }
+}
+
+/** Check if cached filters match current profile filters */
+function isCacheValid(cached: CachedMatchResults, currentCountries?: string[], currentDegree?: string): boolean {
+  const cachedCountries = cached.filters?.countries || [];
+  const currentC = currentCountries || [];
+  const cachedDegree = cached.filters?.degree || "";
+  const currentD = currentDegree || "";
+
+  // If cache has no filter info (old format), treat as invalid
+  if (!cached.filters) return false;
+
+  if (cachedDegree !== currentD) return false;
+  if (cachedCountries.length !== currentC.length) return false;
+  if (!cachedCountries.every(c => currentC.includes(c))) return false;
+
+  return true;
 }
 
 export function useSchools() {
@@ -76,6 +99,7 @@ export function useSchools() {
       setMatchState({
         thinkingSteps: [],
         results: [],
+        competitiveness: 0,
         isMatching: true,
         error: null,
       });
@@ -92,7 +116,7 @@ export function useSchools() {
           } else if (event.type === "result") {
             const results = (event.schools as MatchedSchool[]) || [];
             const competitiveness = (event.competitiveness as number) || 0;
-            saveCachedResults(results, competitiveness);
+            saveCachedResults(results, competitiveness, filters);
             setMatchState((prev) => ({
               ...prev,
               results,

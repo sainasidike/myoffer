@@ -374,6 +374,8 @@ export function useOnboardingChat() {
           // Merge: user message > AI response text (for supplementary fields AI markers don't cover)
           const supplementUpdates = { ...aiTextUpdates, ...userUpdates };
           // Filter out fields where profile already has non-empty values to prevent overwriting
+          // Exception: array fields like target_country use merge semantics (user may add/change countries)
+          const ARRAY_MERGE_FIELDS = new Set(["target_country"]);
           const filtered: Record<string, unknown> = {};
           for (const [key, value] of Object.entries(supplementUpdates)) {
             const existing = profile?.[key as keyof typeof profile];
@@ -381,6 +383,14 @@ export function useOnboardingChat() {
               (Array.isArray(existing) && existing.length === 0);
             if (isEmpty) {
               filtered[key] = value;
+            } else if (ARRAY_MERGE_FIELDS.has(key) && Array.isArray(value)) {
+              // For array fields, merge new values with existing ones
+              const existingArr = Array.isArray(existing) ? existing as string[] : [];
+              const merged = [...new Set([...existingArr, ...value as string[]])];
+              // Only update if there are actually new values
+              if (merged.length !== existingArr.length || !merged.every(v => existingArr.includes(v))) {
+                filtered[key] = merged;
+              }
             }
           }
           if (Object.keys(filtered).length > 0) {

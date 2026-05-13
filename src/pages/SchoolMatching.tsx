@@ -310,13 +310,17 @@ export default function SchoolMatching() {
       )
     : 0;
 
+  // Current profile filter info for display
+  const currentCountries = (profile?.target_country as string[]) || [];
+  const currentDegree = profile?.target_degree || "";
+
   // Auto-trigger from onboarding
   useEffect(() => {
     if (searchParams.get("auto") === "1" && profile && !matchState.isMatching) {
       setSearchParams({}, { replace: true });
       startMatching(profile as unknown as Record<string, unknown>, {
-        countries: (profile.target_country as string[]) || undefined,
-        degree: profile.target_degree || undefined,
+        countries: currentCountries.length > 0 ? currentCountries : undefined,
+        degree: currentDegree || undefined,
       });
     }
   }, [searchParams, profile, matchState.isMatching]);
@@ -474,6 +478,23 @@ export default function SchoolMatching() {
         </Card>
       )}
 
+      {/* Current filter info */}
+      {(currentCountries.length > 0 || currentDegree) && (
+        <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
+          <MapPin className="w-3.5 h-3.5" />
+          <span>当前筛选：</span>
+          {currentCountries.length > 0 && (
+            <span className="font-medium text-foreground">{currentCountries.join("、")}</span>
+          )}
+          {currentDegree && (
+            <span className="font-medium text-foreground">{currentDegree}</span>
+          )}
+          {currentCountries.length === 0 && !currentDegree && (
+            <span className="text-amber-600">未设置目标国家/学位</span>
+          )}
+        </div>
+      )}
+
       {/* Empty state */}
       {!hasResults && !matchState.isMatching && !matchState.error && (
         <Card className="border-border/60 shadow-soft">
@@ -483,8 +504,13 @@ export default function SchoolMatching() {
             </div>
             <h3 className="text-xl font-bold mb-2">准备好开始选校了吗？</h3>
             <p className="text-sm text-muted-foreground mb-8 max-w-md mx-auto leading-relaxed">
-              AI 将根据你的学术背景、语言成绩和申请偏好，从 50+ 项目中精准匹配最适合你的学校
+              AI 将根据你的学术背景、语言成绩和申请偏好，从 150+ 项目中精准匹配最适合你的学校
             </p>
+            {currentCountries.length === 0 && (
+              <p className="text-xs text-amber-600 mb-4">
+                提示：你还没有设置目标国家，建议先在 AI 助手中告知目标国家以获得更精准的结果
+              </p>
+            )}
             <Button
               onClick={handleStartMatching}
               className="h-11 px-8 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 shadow-soft-sm"
